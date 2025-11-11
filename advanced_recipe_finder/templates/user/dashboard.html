@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeInUp">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center mb-4 display-6 fw-bold animate__animated animate__fadeInDown">
+                <div class="bg-gradient-primary rounded-circle d-inline-flex align-items-center justify-content-center me-3 shadow" style="width: 60px; height: 60px;">
+                    <i class="fas fa-user-circle fa-2x text-white"></i>
+                </div>Welcome back, {{ session.username }}!
+            </h1>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card bg-gradient-primary text-white shadow-lg border-0 h-100 animate__animated animate__fadeInLeft animate__delay-1s">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-heart fa-3x mb-3"></i>
+                    <h3 class="card-title mb-2 fw-bold">Favorite Recipes</h3>
+                    <p class="card-text display-4 fw-bold mb-0">{{ favorite_recipes|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-gradient-success text-white shadow-lg border-0 h-100 animate__animated animate__fadeInUp animate__delay-2s">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-eye fa-3x mb-3"></i>
+                    <h3 class="card-title mb-2 fw-bold">Recipes Viewed</h3>
+                    <p class="card-text display-4 fw-bold mb-0">{{ recipes_viewed_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-gradient-info text-white shadow-lg border-0 h-100 animate__animated animate__fadeInRight animate__delay-3s">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                    <h3 class="card-title mb-2 fw-bold">Meal Plans</h3>
+                    <p class="card-text display-4 fw-bold mb-0">{{ meal_plans_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Active Diet Plan Summary -->
+            <div class="card shadow-lg border-0 mb-4 animate__animated animate__fadeInLeft animate__delay-4s">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-dumbbell me-2"></i>Active Diet Plan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_plan %}
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-2 fw-bold">{{ active_plan.plan_name }} (Goal: {{ active_plan.goal }})</h6>
+                            <div class="row">
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{{ url_for('my_diet_plan') }}" class="btn btn-primary shadow">
+                                <i class="fas fa-eye me-2"></i>View Full Plan
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="bg-gradient-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 60px; height: 60px;">
+                            <i class="fas fa-plus-circle fa-2x text-white"></i>
+                        </div>
+                        <h6 class="text-muted mb-2 fw-bold">No active diet plan</h6>
+                        <a href="{{ url_for('diet_planner') }}" class="btn btn-primary shadow">
+                            <i class="fas fa-plus me-2"></i>Create one now!
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Recently Viewed -->
+            <div class="card shadow-lg border-0 mb-4 animate__animated animate__fadeInRight animate__delay-6s">
+                <div class="card-header bg-gradient-info text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-history me-2"></i>Recently Viewed
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_recipes %}
+                    <div class="list-group list-group-flush">
+                        {% for recipe in recent_recipes %}
+                        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="list-group-item list-group-item-action px-0 py-3 border-0 animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">{{ recipe.title }}</h6>
+                                    <p class="mb-1 text-muted small">{{ recipe.ingredients[:60] }}...</p>
+                                    <small class="text-muted fw-bold">{{ recipe.category }} • {{ recipe.difficulty }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-gradient-secondary text-white mb-2">{{ recipe.cooking_time }} min</span>
+                                    <div><i class="fas fa-chevron-right text-primary"></i></div>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="bg-gradient-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 80px; height: 80px;">
+                            <i class="fas fa-history fa-2x text-white"></i>
+                        </div>
+                        <p class="text-muted fw-bold">Your recently viewed recipes will appear here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Favorite Recipes -->
+            <div class="card shadow-lg border-0 mb-4 animate__animated animate__fadeInUp animate__delay-5s">
+                <div class="card-header bg-gradient-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-heart me-2"></i>Your Favorite Recipes
+                    </h5>
+                    <a href="{{ url_for('user_favorites') }}" class="btn btn-light btn-sm shadow">
+                        <i class="fas fa-eye me-2"></i>View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if favorite_recipes %}
+                    <div class="row g-3">
+                        {% for recipe in favorite_recipes %}
+                        <div class="col-md-6">
+                            <div class="card h-100 recipe-card shadow animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                                {% if recipe.image_url %}
+                                <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" class="card-img-top" alt="{{ recipe.title }}" style="height: 150px; object-fit: cover; border-radius: 15px 15px 0 0;" loading="lazy">
+                                {% else %}
+                                <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 150px; border-radius: 15px 15px 0 0;">
+                                    <i class="fas fa-utensils fa-2x text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold">{{ recipe.title }}</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-gradient-primary text-white">{{ recipe.difficulty }}</span>
+                                        <span class="text-muted small"><i class="fas fa-clock me-1"></i> {{ recipe.cooking_time }} min</span>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-eye me-1"></i>View Recipe
+                                        </a>
+                                        <button class="btn btn-outline-danger" onclick="toggleFavorite({{ recipe.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-heart fa-3x mb-3 text-danger"></i>
+                        <h5 class="text-muted fw-bold">No favorite recipes yet</h5>
+                        <p class="text-muted">Start exploring recipes and add them to your favorites!</p>
+                        <a href="{{ url_for('search') }}" class="btn btn-primary btn-lg shadow">
+                            <i class="fas fa-search me-2"></i>Browse Recipes
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Quick Actions Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-lg border-0 h-100 animate__animated animate__fadeInUp animate__delay-7s">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        <a href="{{ url_for('search') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-search me-2"></i>Find Recipes
+                        </a>
+                        <a href="{{ url_for('ai_recipe_generator') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-robot me-2"></i>Generate Recipe
+                        </a>
+                        <a href="{{ url_for('meal_planner') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-calendar-alt me-2"></i>Plan Meals
+                        </a>
+                        <a href="{{ url_for('nutrition_helper') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-apple-alt me-2"></i>Nutrition Analysis
+                        </a>
+                        <a href="{{ url_for('diet_planner') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-weight me-2"></i>Diet Planner
+                        </a>
+                        <a href="{{ url_for('chatbot') }}" class="btn btn-outline-primary btn-lg shadow">
+                            <i class="fas fa-comments me-2"></i>Cooking Assistant
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.bg-gradient-success {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.recipe-card:hover {
+    transform: translateY(-3px);
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.display-4 {
+    font-size: 3rem;
+    font-weight: 300;
+}
+
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2.5rem;
+    }
+
+    .fa-3x {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize favorite buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for recipe in favorite_recipes %}
+        const favoriteBtn = document.querySelector(`button[onclick="toggleFavorite({{ recipe.id }})"]`);
+        if (favoriteBtn) {
+            favoriteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        }
+        {% endfor %}
+    });
+
+    // Toggle favorite status for a recipe (remove from favorites)
+    async function toggleFavorite(recipeId) {
+        try {
+            const response = await fetch(`/toggle_favorite/${recipeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                // Remove the recipe card from the dashboard
+                const recipeCard = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`).closest('.col-md-6');
+                if (recipeCard) {
+                    recipeCard.remove();
+                }
+                // Update the favorite count
+                const favoriteCountElement = document.querySelector('.card.bg-gradient-primary .display-4');
+                if (favoriteCountElement) {
+                    const currentCount = parseInt(favoriteCountElement.textContent);
+                    favoriteCountElement.textContent = currentCount - 1;
+                }
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    }
+</script>
+{% endblock %}

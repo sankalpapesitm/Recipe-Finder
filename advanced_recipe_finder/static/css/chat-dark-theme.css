@@ -1,0 +1,82 @@
+/* Chat Dark Theme Specific Styles */
+
+/* Chat Container */
+.chat-container[data-theme="dark"],
+[data-theme="dark"] .chat-container {
+    background-color: #0A0F1F !important;
+    color: #FFFFFF;
+}
+
+/* Message Bubbles */
+[data-theme="dark"] .message-bubble,
+[data-theme="dark"] .chat-bubble {
+    background-color: #151C2E !important;
+    border: 1px solid #2A3855;
+    color: #FFFFFF !important;
+}
+
+/* AI Assistant Messages */
+[data-theme="dark"] .ai-message,
+[data-theme="dark"] .assistant-message,
+[data-theme="dark"] .bot-message {
+    background-color: #151C2E !important;
+    border: 1px solid #2A3855;
+    color: #FFFFFF !important;
+}
+
+/* User Messages */
+[data-theme="dark"] .user-message {
+    background-color: #1E2A45 !important;
+    border: 1px solid #2A3855;
+    color: #FFFFFF !important;
+}
+
+/* Message Content Areas */
+[data-theme="dark"] .message-content,
+[data-theme="dark"] .message-text {
+    background-color: transparent !important;
+    color: #FFFFFF !important;
+}
+
+/* Generated Solutions */
+[data-theme="dark"] .generated-content,
+[data-theme="dark"] .solution-box,
+[data-theme="dark"] .ai-response {
+    background-color: #151C2E !important;
+    border: 1px solid #2A3855;
+    color: #FFFFFF !important;
+}
+
+/* Code Blocks */
+[data-theme="dark"] pre,
+[data-theme="dark"] code,
+[data-theme="dark"] .code-block {
+    background-color: #1E2A45 !important;
+    border: 1px solid #2A3855;
+    color: #A8B9D5 !important;
+}
+
+/* Chat Input Area */
+[data-theme="dark"] .chat-input {
+    background-color: #1E2A45 !important;
+    border: 1px solid #2A3855;
+    color: #FFFFFF !important;
+}
+
+/* Message Time Stamps */
+[data-theme="dark"] .message-time,
+[data-theme="dark"] .timestamp {
+    color: #A8B9D5 !important;
+}
+
+/* Force Override Any White Backgrounds */
+[data-theme="dark"] [class*="message"],
+[data-theme="dark"] [class*="chat"],
+[data-theme="dark"] [class*="solution"],
+[data-theme="dark"] [style*="background-color: white"],
+[data-theme="dark"] [style*="background-color: #fff"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background: #fff"] {
+    background-color: #151C2E !important;
+    color: #FFFFFF !important;
+}

@@ -1,0 +1,141 @@
+/* 3D Interactions - 2025 Edition */
+
+/* 3D Card Effects */
+[data-theme="dark"] .card-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    perspective: 1000px;
+}
+
+[data-theme="dark"] .card-3d:hover {
+    transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+}
+
+[data-theme="dark"] .card-3d::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 100%
+    );
+    transform: translateZ(-1px);
+    pointer-events: none;
+}
+
+/* 3D Button Effects */
+[data-theme="dark"] .btn-3d {
+    transform-style: preserve-3d;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+[data-theme="dark"] .btn-3d::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    transform: translateZ(-4px);
+    border-radius: inherit;
+}
+
+[data-theme="dark"] .btn-3d:hover {
+    transform: translateZ(8px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-3d:active {
+    transform: translateZ(2px);
+}
+
+/* 3D Image Effects */
+[data-theme="dark"] .image-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    perspective: 1000px;
+}
+
+[data-theme="dark"] .image-3d img {
+    transform: translateZ(20px);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .image-3d:hover {
+    transform: rotateX(10deg) rotateY(10deg);
+}
+
+/* 3D Menu Effects */
+[data-theme="dark"] .menu-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+[data-theme="dark"] .menu-3d .dropdown-menu {
+    transform: translateZ(-10px);
+    transform-origin: top;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .menu-3d .dropdown-menu.show {
+    transform: translateZ(0) rotateX(0);
+}
+
+/* 3D Text Effects */
+[data-theme="dark"] .text-3d {
+    text-shadow: 0 1px 0 #ccc,
+                 0 2px 0 #c9c9c9,
+                 0 3px 0 #bbb,
+                 0 4px 0 #b9b9b9,
+                 0 5px 0 #aaa,
+                 0 6px 1px rgba(0,0,0,.1),
+                 0 0 5px rgba(0,0,0,.1),
+                 0 1px 3px rgba(0,0,0,.3),
+                 0 3px 5px rgba(0,0,0,.2),
+                 0 5px 10px rgba(0,0,0,.25),
+                 0 10px 10px rgba(0,0,0,.2),
+                 0 20px 20px rgba(0,0,0,.15);
+}
+
+/* 3D Form Effects */
+[data-theme="dark"] .form-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+[data-theme="dark"] .form-3d .form-control {
+    transform: translateZ(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .form-3d .form-control:focus {
+    transform: translateZ(5px);
+}
+
+/* 3D Grid Layout */
+[data-theme="dark"] .grid-3d {
+    transform-style: preserve-3d;
+    perspective: 2000px;
+}
+
+[data-theme="dark"] .grid-3d > * {
+    transform: translateZ(0);
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .grid-3d:hover > * {
+    transform: translateZ(20px);
+}
+
+[data-theme="dark"] .grid-3d > *:hover {
+    transform: translateZ(40px) scale(1.05);
+    z-index: 1;
+}

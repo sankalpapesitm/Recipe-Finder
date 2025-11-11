@@ -1,0 +1,888 @@
+/* Dark Theme Modern Effects - 2025 Edition */
+
+/* Enhanced Dark Theme Variables */
+[data-theme="dark"] {
+    /* Core Background Colors */
+    --dark-bg: #0A0F1F;  /* Main background */
+    --dark-surface: #151C2E;  /* Surface color */
+    --dark-elevated: #1E2A45;  /* Elevated elements */
+    --dark-border: #2A3855;  /* Borders */
+    
+    /* Text Colors */
+    --dark-text: #FFFFFF;  /* Primary text */
+    --dark-text-secondary: #A8B9D5;  /* Secondary text */
+    
+    /* Component Colors */
+    --dark-card: #151C2E;  /* Card backgrounds */
+    --dark-input: #1E2A45;  /* Input fields */
+    --dark-dropdown: #1E2A45;  /* Dropdown menus */
+    --dark-modal: #151C2E;  /* Modal backgrounds */
+    --dark-sidebar: #0F1729;  /* Sidebar background */
+    
+    /* Override Bootstrap/Default White Backgrounds */
+    --white: var(--dark-bg) !important;  /* Override Bootstrap white */
+    --light: var(--dark-surface) !important;  /* Override Bootstrap light */
+    --bs-body-bg: var(--dark-bg) !important;  /* Override body background */
+    --bs-body-color: var(--dark-text) !important;  /* Override body text */
+    background-color: var(--dark-bg) !important;  /* Ensure dark background */
+    
+    /* Neon colors with higher contrast */
+    --neon-primary: #4F7FFF;  /* Brighter blue */
+    --neon-secondary: #00E5A0;  /* Vibrant green */
+    --neon-accent: #FF9D00;  /* Bright orange */
+    
+    /* Enhanced glow effects */
+    --glow-primary: rgba(79, 127, 255, 0.25);
+    --glow-secondary: rgba(0, 229, 160, 0.25);
+    --glow-accent: rgba(255, 157, 0, 0.25);
+    
+    /* Glass effect improvements */
+    --glass-bg: rgba(30, 42, 69, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+@keyframes glowPulse {
+    0% {
+        box-shadow: 0 0 5px var(--glow-primary),
+                    0 0 10px var(--glow-primary);
+    }
+    50% {
+        box-shadow: 0 0 20px var(--glow-primary),
+                    0 0 40px var(--glow-primary);
+    }
+    100% {
+        box-shadow: 0 0 5px var(--glow-primary),
+                    0 0 10px var(--glow-primary);
+    }
+}
+
+[data-theme="dark"] .hero-section {
+    background: linear-gradient(-45deg, 
+        var(--neon-primary), 
+        var(--neon-secondary),
+        var(--neon-accent),
+        var(--neon-primary));
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    position: relative;
+}
+
+[data-theme="dark"] .hero-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 15, 30, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+/* Modern Card Effects */
+[data-theme="dark"] .card {
+    position: relative;
+}
+
+[data-theme="dark"] .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 50%,
+        transparent 100%);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+[data-theme="dark"] .card:hover::before {
+    transform: translateX(100%);
+}
+
+/* Glowing Elements */
+[data-theme="dark"] .btn-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .btn-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .btn-glow:hover::after {
+    opacity: 1;
+}
+
+/* Navigation Glow */
+[data-theme="dark"] .nav-link.active {
+    position: relative;
+    color: var(--neon-primary);
+}
+
+[data-theme="dark"] .nav-link.active::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--neon-primary);
+    box-shadow: 0 0 10px var(--neon-primary);
+    animation: glowPulse 2s infinite;
+}
+
+/* Form Field Effects */
+[data-theme="dark"] .form-control:focus {
+    box-shadow: 0 0 0 2px var(--neon-primary),
+                0 0 15px var(--glow-primary);
+    border-color: var(--neon-primary);
+}
+
+/* Modern Loading Effects */
+[data-theme="dark"] .loading-spinner .spinner-circle {
+    box-shadow: 0 0 15px var(--neon-primary);
+}
+
+/* Badge and Pill Effects */
+[data-theme="dark"] .badge {
+    background: var(--glass-bg);
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 10px var(--glow-primary);
+}
+
+/* Modern Table Effects */
+[data-theme="dark"] .table {
+    background: var(--glass-bg);
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .table th {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: var(--glass-border);
+}
+
+[data-theme="dark"] .table td {
+    border-color: var(--glass-border);
+}
+
+/* Dropdown Menu Effects */
+[data-theme="dark"] .dropdown-menu {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .dropdown-item {
+    
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background: var(--dark-surface);
+    color: var(--neon-primary);
+    text-shadow: 0 0 10px var(--glow-primary);
+}
+
+/* Base Dark Theme Styles */
+[data-theme="dark"] body {
+    background: var(--dark-bg);
+    
+}
+
+/* Enhanced Card Visibility */
+[data-theme="dark"] .card {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .card:hover {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 20px var(--glow-primary);
+    background: var(--dark-elevated);
+}
+
+/* Improved Text Contrast */
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4, 
+[data-theme="dark"] h5, 
+[data-theme="dark"] h6 {
+    
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] p, 
+[data-theme="dark"] span, 
+[data-theme="dark"] div {
+    
+}
+
+/* Enhanced Navigation */
+[data-theme="dark"] .navbar {
+    background: var(--dark-elevated) !important;
+    border-bottom: 1px solid var(--dark-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .nav-link {
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .nav-link:hover {
+    color: var(--neon-primary) !important;
+    text-shadow: 0 0 10px var(--glow-primary);
+}
+
+/* Feature Icons Enhancement */
+[data-theme="dark"] .feature-icon {
+    color: var(--neon-primary);
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 0 15px var(--glow-primary);
+}
+
+/* Recipe Card Specific Improvements */
+[data-theme="dark"] .recipe-card {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .recipe-card img {
+    border-bottom: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .recipe-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Table Improvements */
+[data-theme="dark"] .table {
+    
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .table th {
+    background: var(--dark-elevated);
+    color: var(--neon-primary);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .table td {
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background: var(--dark-elevated);
+}
+
+/* Enhanced Form Elements */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background: var(--dark-elevated);
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 15px var(--glow-primary);
+    
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: var(--dark-text-secondary);
+}
+
+/* Button Improvements */
+[data-theme="dark"] .btn-primary {
+    background: var(--neon-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    box-shadow: 0 0 15px var(--glow-primary);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: var(--neon-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--dark-bg);
+    box-shadow: 0 0 15px var(--glow-secondary);
+}
+
+[data-theme="dark"] .btn-accent {
+    background: var(--neon-accent);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--dark-bg);
+    box-shadow: 0 0 15px var(--glow-accent);
+}
+
+/* Custom Scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 12px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--dark-elevated);
+    border: 2px solid var(--dark-surface);
+    border-radius: 6px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-border);
+}
+
+/* Hero Section Enhancement */
+[data-theme="dark"] .hero-section {
+    background: linear-gradient(135deg, var(--dark-bg), var(--dark-elevated));
+    border-bottom: 1px solid var(--dark-border);
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme="dark"] .hero-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(var(--neon-primary-rgb), 0.1),
+        rgba(var(--neon-accent-rgb), 0.1));
+    z-index: -1;
+}
+
+/* Global Page Fixes for Dark Theme */
+[data-theme="dark"] {
+    background-color: var(--dark-bg) !important;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] main,
+[data-theme="dark"] section,
+[data-theme="dark"] aside,
+[data-theme="dark"] .container,
+[data-theme="dark"] .container-fluid {
+    background-color: var(--dark-bg) !important;
+    
+}
+
+/* Fix all possible white backgrounds */
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-light,
+[data-theme="dark"] [class*="bg-"],
+[data-theme="dark"] [style*="background-color: white"],
+[data-theme="dark"] [style*="background-color: #fff"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background: #fff"] {
+    background-color: var(--dark-surface) !important;
+}
+
+/* Recipe Details Page */
+[data-theme="dark"] .recipe-details {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .recipe-ingredients,
+[data-theme="dark"] .recipe-instructions {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+/* Profile Pages */
+[data-theme="dark"] .profile-section,
+[data-theme="dark"] .settings-section {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* Dashboard Pages */
+[data-theme="dark"] .dashboard-card {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .stats-container {
+    background: var(--dark-elevated);
+}
+
+/* Admin Pages */
+[data-theme="dark"] .admin-panel {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .admin-sidebar {
+    background: var(--dark-sidebar);
+    border-right: 1px solid var(--dark-border);
+}
+
+/* Search Results Page */
+[data-theme="dark"] .search-results {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .filter-section {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+}
+
+/* Login/Register Pages */
+[data-theme="dark"] .auth-container {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .auth-form {
+    background: var(--dark-elevated);
+    padding: 25px;
+    border-radius: 8px;
+}
+
+/* Modal Fixes */
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .modal-footer {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+}
+
+/* Dropdown Fixes */
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .select2-dropdown,
+[data-theme="dark"] .autocomplete-suggestions {
+    background: var(--dark-elevated) !important;
+    border: 1px solid var(--dark-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Form Control Fixes */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .input-group-text {
+    background: var(--dark-input) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+/* Table Fixes */
+[data-theme="dark"] table,
+[data-theme="dark"] .table,
+[data-theme="dark"] tr,
+[data-theme="dark"] td,
+[data-theme="dark"] th {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+    background: var(--dark-elevated) !important;
+}
+
+/* Card Fixes */
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-body,
+[data-theme="dark"] .card-footer {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+}
+
+/* Alert and Notification Fixes */
+[data-theme="dark"] .alert,
+[data-theme="dark"] .toast,
+[data-theme="dark"] .notification {
+    background: var(--dark-elevated) !important;
+    border-color: var(--dark-border) !important;
+}
+
+/* Pagination Fixes */
+[data-theme="dark"] .pagination {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .page-item .page-link {
+    background: var(--dark-elevated);
+    border-color: var(--dark-border);
+    
+}
+
+/* List Group Fixes */
+[data-theme="dark"] .list-group-item {
+    background: var(--dark-surface) !important;
+    border-color: var(--dark-border) !important;
+    color: var(--dark-text) !important;
+}
+
+/* Tooltip Fixes */
+[data-theme="dark"] .tooltip-inner {
+    background: var(--dark-elevated) !important;
+    color: var(--dark-text) !important;
+}
+
+/* Progress Bar Fixes */
+[data-theme="dark"] .progress {
+    background: var(--dark-elevated) !important;
+}
+
+/* Search Bar Enhancement */
+[data-theme="dark"] .search-bar {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .search-bar:focus-within {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 20px var(--glow-primary);
+}
+
+/* Enhanced Chat Interface */
+[data-theme="dark"] .chat-container,
+[data-theme="dark"] .chat-interface,
+[data-theme="dark"] .chat-window {
+    background: var(--dark-bg);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Chat Assistant Specific */
+[data-theme="dark"] .ai-assistant {
+    background: var(--dark-surface);
+    border-bottom: 1px solid var(--dark-border);
+    padding: 16px;
+    
+}
+
+[data-theme="dark"] .ai-message,
+[data-theme="dark"] .ai-response {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    
+}
+
+/* Generated Solutions */
+[data-theme="dark"] .generated-solution,
+[data-theme="dark"] .solution-container,
+[data-theme="dark"] .code-block,
+[data-theme="dark"] pre,
+[data-theme="dark"] code {
+    background: var(--dark-elevated) !important;
+    border: 1px solid var(--dark-border);
+    border-radius: 8px;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .solution-content {
+    background: var(--dark-surface);
+    padding: 16px;
+    border-radius: 8px;
+    margin: 8px 0;
+    
+}
+
+/* Code Blocks and Syntax Highlighting */
+[data-theme="dark"] .hljs,
+[data-theme="dark"] .highlight {
+    background: var(--dark-elevated) !important;
+    color: var(--dark-text) !important;
+}
+
+[data-theme="dark"] .code-wrapper {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    border-radius: 8px;
+    margin: 12px 0;
+}
+
+/* Chat Elements */
+[data-theme="dark"] .chat-messages {
+    background: var(--dark-bg);
+    padding: 20px;
+}
+
+[data-theme="dark"] .message-bubble {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    max-width: 80%;
+}
+
+[data-theme="dark"] .user-message {
+    background: var(--neon-primary);
+    color: white;
+    margin-left: auto;
+    border-radius: 12px 12px 0 12px;
+}
+
+[data-theme="dark"] .assistant-message {
+    background: var(--dark-elevated);
+    
+    margin-right: auto;
+    border-radius: 12px 12px 12px 0;
+}
+
+/* Message Input Area */
+[data-theme="dark"] .chat-input-container {
+    background: var(--dark-surface);
+    border-top: 1px solid var(--dark-border);
+    padding: 16px;
+}
+
+[data-theme="dark"] .chat-input {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    
+}
+
+[data-theme="dark"] .chat-input:focus {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 10px var(--glow-primary);
+}
+
+/* Chat UI Components */
+[data-theme="dark"] .chat-header {
+    background: var(--dark-surface);
+    border-bottom: 1px solid var(--dark-border);
+    padding: 12px 20px;
+}
+
+[data-theme="dark"] .chat-title {
+    color: var(--neon-primary);
+    font-weight: 600;
+}
+
+[data-theme="dark"] .chat-actions button {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    
+}
+
+/* Message Status and Info */
+[data-theme="dark"] .message-time,
+[data-theme="dark"] .message-status {
+    color: var(--dark-text-secondary);
+    font-size: 0.8em;
+}
+
+/* Syntax Highlighting Overrides */
+[data-theme="dark"] .token.comment,
+[data-theme="dark"] .token.prolog,
+[data-theme="dark"] .token.doctype,
+[data-theme="dark"] .token.cdata {
+    color: #636e7b;
+}
+
+[data-theme="dark"] .token.punctuation {
+    color: #a9b7c6;
+}
+
+[data-theme="dark"] .token.property,
+[data-theme="dark"] .token.tag,
+[data-theme="dark"] .token.boolean,
+[data-theme="dark"] .token.number,
+[data-theme="dark"] .token.constant,
+[data-theme="dark"] .token.symbol,
+[data-theme="dark"] .token.deleted {
+    color: #cc7832;
+}
+
+[data-theme="dark"] .token.selector,
+[data-theme="dark"] .token.attr-name,
+[data-theme="dark"] .token.string,
+[data-theme="dark"] .token.char,
+[data-theme="dark"] .token.builtin,
+[data-theme="dark"] .token.inserted {
+    color: #6a8759;
+}
+
+[data-theme="dark"] .token.operator,
+[data-theme="dark"] .token.entity,
+[data-theme="dark"] .token.url,
+[data-theme="dark"] .language-css .token.string,
+[data-theme="dark"] .style .token.string {
+    color: #a9b7c6;
+}
+
+[data-theme="dark"] .token.atrule,
+[data-theme="dark"] .token.attr-value,
+[data-theme="dark"] .token.keyword {
+    color: #cc7832;
+}
+
+[data-theme="dark"] .token.function,
+[data-theme="dark"] .token.class-name {
+    color: #ffc66d;
+}
+
+[data-theme="dark"] .token.regex,
+[data-theme="dark"] .token.important,
+[data-theme="dark"] .token.variable {
+    color: #629755;
+}
+
+[data-theme="dark"] .chat-messages {
+    background: var(--dark-bg);
+    border: 1px solid var(--dark-border);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .message {
+    border: 1px solid var(--dark-border);
+    margin: 8px 0;
+}
+
+[data-theme="dark"] .user-message {
+    background: var(--dark-elevated);
+    border-radius: 12px 12px 2px 12px;
+    padding: 12px 16px;
+    margin-left: auto;
+    max-width: 80%;
+    position: relative;
+}
+
+[data-theme="dark"] .user-message::before {
+    content: 'You';
+    position: absolute;
+    top: -20px;
+    right: 0;
+    color: var(--dark-text-secondary);
+    font-size: 0.85em;
+}
+
+
+
+[data-theme="dark"] .bot-message::before {
+    content: 'AI Assistant';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    color: var(--neon-primary);
+    font-size: 0.85em;
+}
+
+[data-theme="dark"] .message-content {
+    
+    line-height: 1.5;
+}
+
+[data-theme="dark"] .chat-input {
+    background: var(--dark-elevated);
+    border: 1px solid var(--dark-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .chat-input:focus {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 15px var(--glow-primary);
+}
+
+[data-theme="dark"] .chat-submit {
+    background: var(--neon-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-left: 8px;
+    box-shadow: 0 0 10px var(--glow-primary);
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .chat-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px var(--glow-primary);
+}
+
+[data-theme="dark"] .chat-timestamp {
+    color: var(--dark-text-secondary);
+    font-size: 0.8em;
+    text-align: center;
+    margin: 16px 0;
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .message-status {
+    color: var(--neon-secondary);
+    font-size: 0.85em;
+    margin-top: 4px;
+}
+
+[data-theme="dark"] .typing-indicator {
+    color: var(--neon-primary);
+    font-size: 0.9em;
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+[data-theme="dark"] .typing-indicator::after {
+    content: "...";
+    animation: typing 1.4s infinite;
+}
+
+@keyframes typing {
+    0%, 20% { content: "."; }
+    40%, 60% { content: ".."; }
+    80%, 100% { content: "..."; }
+}
+
+[data-theme="dark"] .chat-header {
+    background: var(--dark-elevated);
+    border-bottom: 1px solid var(--dark-border);
+    padding: 16px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+[data-theme="dark"] .chat-footer {
+    background: var(--dark-elevated);
+    border-top: 1px solid var(--dark-border);
+    padding: 16px;
+    border-radius: 0 0 8px 8px;
+}

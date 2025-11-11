@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) if recipe.image_url else url_for('static', filename='hero-image.png') }}" class="d-block mx-auto rounded" alt="{{ recipe.title }}" loading="lazy" style="width: 512px; height: 512px; object-fit: cover;">
+                <div class="card-body">
+                    <h1 class="card-title">{{ recipe.title }}</h1>
+                    <p class="text-muted">{{ recipe.category }} | {{ recipe.cooking_time }} minutes | {{ recipe.difficulty }}</p>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            {% if is_favorite %}
+                            <button class="btn btn-danger" onclick="toggleFavorite({{ recipe.id }})"><i class="fas fa-heart"></i> Remove from Favorites</button>
+                            {% else %}
+                            <button class="btn btn-outline-danger" onclick="toggleFavorite({{ recipe.id }})"><i class="far fa-heart"></i> Add to Favorites</button>
+                            {% endif %}
+                        </div>
+                        <div class="rating">
+                            {% for i in range(1, 6) %}
+                                <i class="fa{{ 's' if user_rating and i <= user_rating else 'r' }} fa-star text-warning star-rating" data-rating="{{ i }}" onclick="selectStar({{ i }}, {{ recipe.id }})" style="cursor: pointer;"></i>
+                            {% endfor %}
+                            <button id="submit-rating-btn" class="btn btn-sm btn-primary ms-2" onclick="submitRating({{ recipe.id }})" style="display: none;">Submit Rating</button>
+                            <span class="text-muted ms-2">({{ "%.1f"|format(average_rating) if average_rating else "0.0" }} average)</span>
+                            {% if user_rating %}
+                            <span class="text-muted ms-2">Your rating: {{ user_rating }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+
+
+                    <h5>Ingredients</h5>
+                    <ul class="list-group mb-3">
+                        {% for ingredient in recipe.ingredients %}
+                        <li class="list-group-item">{{ ingredient }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    <h5>Instructions</h5>
+                    <ol class="list-group list-group-numbered mb-3">
+                        {% for instruction in recipe.instructions %}
+                        <li class="list-group-item">{{ instruction }}</li>
+                        {% endfor %}
+                    </ol>
+
+                    {% if recipe.nutritional_info %}
+                    <h5>Nutritional Information</h5>
+                    <ul class="list-group mb-3">
+                        {% for key, value in recipe.nutritional_info.items() %}
+                        <li class="list-group-item"><strong>{{ key|capitalize }}:</strong> {{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var averageRating = {{ "%.1f"|format(average_rating) if average_rating else "0.0" }};
+    let currentRating = {{ user_rating or 0 }};
+    let selectedRating = 0;
+    let feedbackRating = 0;
+    let isInitializing = true;
+
+    // Initialize stars on page load if user has a rating
+    window.addEventListener('DOMContentLoaded', function() {
+        {% if user_rating %}
+        // Display the saved rating
+        const stars = document.querySelectorAll('.star-rating');
+        stars.forEach((star, index) => {
+            if (index < {{ user_rating }}) {
+                star.classList.remove('far');
+                star.classList.add('fas');
+            } else {
+                star.classList.remove('fas');
+                star.classList.add('far');
+            }
+        });
+        // Keep selectedRating at 0 for proper toggle functionality
+        selectedRating = 0;
+        {% endif %}
+        isInitializing = false;
+    });
+
+    function toggleFavorite(recipeId) {
+        fetch(`/toggle_favorite/${recipeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const button = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`);
+                if (data.action === 'added') {
+                    button.innerHTML = '<i class="fas fa-heart"></i> Remove from Favorites';
+                    button.classList.remove('btn-outline-danger');
+                    button.classList.add('btn-danger');
+                } else {
+                    button.innerHTML = '<i class="far fa-heart"></i> Add to Favorites';
+                    button.classList.remove('btn-danger');
+                    button.classList.add('btn-outline-danger');
+                }
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function selectStar(rating, recipeId) {
+        // Check if clicking the same star that's currently selected or the current rating
+        const clickingSameStar = selectedRating === rating;
+        const clickingCurrentRating = selectedRating === 0 && currentRating === rating;
+        
+        // Toggle: remove rating if clicking same star
+        if (clickingSameStar || clickingCurrentRating) {
+            selectedRating = 0;
+            // Remove all stars
+            const stars = document.querySelectorAll('.star-rating');
+            stars.forEach((star) => {
+                star.classList.remove('fas');
+                star.classList.add('far');
+            });
+            // Hide submit button
+            document.getElementById('submit-rating-btn').style.display = 'none';
+        } else {
+            // Set new rating
+            selectedRating = rating;
+            const stars = document.querySelectorAll('.star-rating');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('far');
+                    star.classList.add('fas');
+                } else {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                }
+            });
+
+            // Show submit button if rating is different from current, hide if same
+            if (rating !== currentRating) {
+                document.getElementById('submit-rating-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('submit-rating-btn').style.display = 'none';
+            }
+        }
+    }
+
+    function selectFeedbackStar(rating) {
+        feedbackRating = rating;
+        const stars = document.querySelectorAll('.feedback-star');
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.classList.remove('far');
+                star.classList.add('fas');
+            } else {
+                star.classList.remove('fas');
+                star.classList.add('far');
+            }
+        });
+
+        // Update feedback rating text
+        const feedbackText = document.getElementById('feedback-rating-text');
+        feedbackText.textContent = `Selected rating: ${rating}`;
+    }
+
+    function submitRating(recipeId) {
+        if (selectedRating === 0) {
+            alert('Please select a rating first');
+            return;
+        }
+
+        // Submit the rating via AJAX
+        fetch(`/submit_review/${recipeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `rating=${selectedRating}&comment=`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Rating submitted successfully!');
+                // Hide the submit button
+                document.getElementById('submit-rating-btn').style.display = 'none';
+                // Update current rating to the newly submitted rating
+                currentRating = selectedRating;
+                // Reset selectedRating to 0 so toggle works properly on next click
+                selectedRating = 0;
+                // Update the user's rating display without reloading
+                const userRatingSpan = document.querySelector('.rating .text-muted:last-child');
+                if (!userRatingSpan || !userRatingSpan.textContent.includes('Your rating:')) {
+                    const newSpan = document.createElement('span');
+                    newSpan.className = 'text-muted ms-2';
+                    newSpan.textContent = `Your rating: ${currentRating}`;
+                    document.querySelector('.rating').appendChild(newSpan);
+                } else {
+                    userRatingSpan.textContent = `Your rating: ${currentRating}`;
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function selectRating(rating) {
+        document.getElementById('selectedRating').value = rating;
+        const stars = document.querySelectorAll('.star-input');
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.classList.remove('far');
+                star.classList.add('fas');
+            } else {
+                star.classList.remove('fas');
+                star.classList.add('far');
+            }
+        });
+    }
+
+    function submitFeedback(recipeId) {
+        const comment = document.getElementById('comment').value;
+
+        if (!comment.trim()) {
+            alert('Please enter your feedback');
+            return;
+        }
+
+        fetch(`/submit_review/${recipeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `rating=${feedbackRating}&comment=${encodeURIComponent(comment)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Feedback submitted successfully!');
+                // Clear the form
+                document.getElementById('comment').value = '';
+                // Update current rating if a rating was selected in feedback
+                if (feedbackRating > 0) {
+                    currentRating = feedbackRating;
+                    // Reset selectedRating to 0 so toggle works properly
+                    selectedRating = 0;
+                    // Update the user's rating display
+                    const userRatingSpan = document.querySelector('.rating .text-muted:last-child');
+                    if (!userRatingSpan || !userRatingSpan.textContent.includes('Your rating:')) {
+                        const newSpan = document.createElement('span');
+                        newSpan.className = 'text-muted ms-2';
+                        newSpan.textContent = `Your rating: ${feedbackRating}`;
+                        document.querySelector('.rating').appendChild(newSpan);
+                    } else {
+                        userRatingSpan.textContent = `Your rating: ${feedbackRating}`;
+                    }
+                    // Update visual stars in main rating section
+                    const stars = document.querySelectorAll('.star-rating');
+                    stars.forEach((star, index) => {
+                        if (index < feedbackRating) {
+                            star.classList.remove('far');
+                            star.classList.add('fas');
+                        } else {
+                            star.classList.remove('fas');
+                            star.classList.add('far');
+                        }
+                    });
+                    // Hide submit button since rating is now current
+                    document.getElementById('submit-rating-btn').style.display = 'none';
+                }
+                // Reset feedback rating
+                feedbackRating = 0;
+                // Reset feedback stars
+                const feedbackStars = document.querySelectorAll('.feedback-star');
+                feedbackStars.forEach((star) => {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                });
+                // Update feedback rating text
+                const feedbackText = document.getElementById('feedback-rating-text');
+                feedbackText.textContent = `Your current rating: ${currentRating}`;
+                // Reload the page to update the average rating
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

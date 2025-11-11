@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Meal Planner{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="display-5 mb-4">Meal Planner</h1>
+
+    <div class="row">
+        <!-- Left Column: Meal Plan Generation and Results -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-magic me-2"></i>Generate a New Meal Plan</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('meal_planner') }}" id="mealPlanForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="dietary_preferences" class="form-label">Dietary Preferences</label>
+                                <input type="text" class="form-control" id="dietary_preferences" name="dietary_preferences" placeholder="e.g., Vegetarian, Low-carb" value="{{ form_data.dietary_preferences or '' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="allergies" class="form-label">Allergies or Exclusions</label>
+                                <input type="text" class="form-control" id="allergies" name="allergies" placeholder="e.g., Nuts, Shellfish" value="{{ form_data.allergies or '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="days" class="form-label">Number of Days</label>
+                            <input type="number" class="form-control" id="days" name="days" min="1" max="30" value="{{ form_data.days or 7 }}" required>
+                        </div>
+                        <button type="submit" id="generatePlanBtn" class="btn btn-primary w-100">
+                            <span id="btn-text"><i class="fas fa-magic me-2"></i>Generate Meal Plan</span>
+                            <span id="btn-loader" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                        </button>
+                    </form>
+
+                    {% if meal_plan %}
+                    <div class="mt-3 d-flex justify-content-between align-items-center border-top pt-3">
+                        <span class="text-success fw-bold"><i class="fas fa-check-circle me-2"></i>Plan Generated Successfully!</span>
+                        <div class="action-buttons">
+                            <button class="btn btn-light btn-sm me-2" id="saveMealPlanBtn">
+                                <i class="fas fa-save"></i> Save Plan
+                            </button>
+                            <button class="btn btn-light btn-sm me-2" onclick="generatePDF('mealPlanResults', 'meal_plan.pdf')">
+                                <i class="fas fa-file-pdf"></i> Download PDF
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if meal_plan %}
+            <div id="mealPlanResults" class="printable-area mt-4">
+                <div class="card shadow-sm meal-plan-results-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Your Generated {{ meal_plan.days|length }}-Day Meal Plan</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for day in meal_plan.days %}
+                        <div class="mb-4">
+                            <h4 class="text-primary">{{ day.day }}</h4>
+                            <hr>
+                            {% for meal in day.meals %}
+                            <div class="meal-item mb-3 p-3 bg-light rounded">
+                                <h6>{{ meal.type }}: <span class="fw-bold">{{ meal.name }}</span></h6>
+                                <p class="small text-muted">{{ meal.description }}</p>
+                                <p class="small"><strong>Prep Time:</strong> {{ meal.prep_time }}</p>
+                                <h6 class="mt-2">Ingredients:</h6>
+                                <ul class="list-unstyled small">
+                                    {% for ingredient in meal.ingredients %}
+                                    <li><i class="fas fa-shopping-basket me-2"></i>{{ ingredient }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Saved Plans -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Saved Meal Plans<h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% if saved_plans %}
+                        {% for plan in saved_plans %}
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('meal_plan_detail', plan_id=plan.id) }}" class="text-decoration-none flex-grow-1">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ plan.plan_data.plan_name if plan.plan_data and 'plan_name' in plan.plan_data else 'Meal Plan' }}</h6>
+                                    <small>{{ plan.plan_data.meals|length if plan.plan_data and 'meals' in plan.plan_data else 'N/A' }} meals</small>
+                                </div>
+                                <small class="text-muted">Created on {{ plan.created_at.strftime('%Y-%m-%d') }}</small>
+                            </a>
+                            <button class="btn btn-danger btn-sm ms-2" onclick="deleteMealPlan({{ plan.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item text-muted">No recent meal plans.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
+<script>
+// Delete meal plan functionality
+function deleteMealPlan(planId) {
+    if (confirm('Are you sure you want to delete this meal plan?')) {
+        fetch(`/delete_meal_plan/${planId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Meal plan deleted successfully!');
+                // Refresh only the saved plans section
+                fetch(window.location.href)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const newDoc = parser.parseFromString(html, 'text/html');
+                        const newSavedPlans = newDoc.querySelector('.col-lg-4 .list-group');
+                        const currentSavedPlans = document.querySelector('.col-lg-4 .list-group');
+                        if (newSavedPlans && currentSavedPlans) {
+                            currentSavedPlans.innerHTML = newSavedPlans.innerHTML;
+                        }
+                    });
+            } else {
+                alert('Error deleting meal plan: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting meal plan: ' + error.message);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Form submission loader
+    const mealPlanForm = document.getElementById('mealPlanForm');
+    if (mealPlanForm) {
+        mealPlanForm.addEventListener('submit', function() {
+            const btn = document.getElementById('generatePlanBtn');
+            btn.disabled = true;
+            btn.querySelector('#btn-text').style.display = 'none';
+            btn.querySelector('#btn-loader').style.display = 'inline-block';
+        });
+    }
+
+    // Save plan functionality
+    const savePlanBtn = document.getElementById('saveMealPlanBtn');
+    if (savePlanBtn) {
+        savePlanBtn.addEventListener('click', function() {
+            {% if meal_plan %}
+            const mealPlanData = {{ meal_plan|tojson }};
+            const planName = prompt('Enter a name for your meal plan:');
+            if (!planName) return;
+
+            const saveData = {
+                plan_name: planName,
+                goal: 'Custom Meal Plan',
+                meals: mealPlanData.days.flatMap(day =>
+                    day.meals.map(meal => ({
+                        day: day.day,
+                        meal_type: meal.type,
+                        meal_name: meal.name,
+                        description: meal.description,
+                        ingredients: meal.ingredients,
+                        prep_time: meal.prep_time
+                    }))
+                )
+            };
+
+            fetch('/save_meal_plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(saveData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Meal plan saved successfully!');
+                    // Hide the save button after saving to prevent multiple saves
+                    const saveBtn = document.getElementById('saveMealPlanBtn');
+                    if (saveBtn) {
+                        saveBtn.style.display = 'none';
+                    }
+                    // Refresh only the saved plans section
+                    fetch(window.location.href)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const newDoc = parser.parseFromString(html, 'text/html');
+                            const newSavedPlans = newDoc.querySelector('.col-lg-4 .list-group');
+                            const currentSavedPlans = document.querySelector('.col-lg-4 .list-group');
+                            if (newSavedPlans && currentSavedPlans) {
+                                currentSavedPlans.innerHTML = newSavedPlans.innerHTML;
+                            }
+                        });
+                } else {
+                    alert('Error saving meal plan: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving meal plan: ' + error.message);
+            });
+            {% else %}
+            alert('No meal plan to save. Please generate a meal plan first.');
+            {% endif %}
+        });
+    }
+});
+
+// Simple print styles
+const style = document.createElement('style');
+style.innerHTML = `
+    @media print {
+        @page {
+            margin: 15mm;
+            size: A4;
+        }
+        body * {
+            visibility: hidden;
+        }
+        .printable-area, .printable-area * {
+            visibility: visible;
+        }
+        .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+        }
+        .btn, .card-header .btn, .card-header a, .action-buttons {
+            display: none !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-header {
+            background-color: #fff !important;
+            color: #000 !important;
+            border-bottom: 2px solid #000;
+            padding: 0 0 10px 0 !important;
+            margin-bottom: 20px !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+        .mb-4 {
+            margin-bottom: 30px !important;
+            padding-bottom: 20px !important;
+            border-bottom: 1px solid #eee;
+            page-break-inside: avoid;
+        }
+        .mb-4:last-child {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+            border-bottom: none;
+        }
+        .meal-item {
+            margin-bottom: 15px !important;
+            padding: 15px !important;
+            page-break-inside: avoid;
+        }
+        .meal-item:last-child {
+            margin-bottom: 0 !important;
+        }
+        hr {
+            margin: 15px 0 !important;
+            border-color: #eee;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+</script>
+{% endblock %}

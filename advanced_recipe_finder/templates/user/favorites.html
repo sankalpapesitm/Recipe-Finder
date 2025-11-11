@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Your Favorite Recipes</h2>
+    <a href="{{ url_for('search') }}" class="btn btn-primary">Find More Recipes</a>
+</div>
+
+{% if favorite_recipes %}
+<div class="row g-4">
+    {% for recipe in favorite_recipes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 recipe-card">
+            {% if recipe.image_url %}
+            <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" class="card-img-top" alt="{{ recipe.title }}" loading="lazy">
+            {% else %}
+            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                <i class="fas fa-utensils fa-3x text-light"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ recipe.title }}</h5>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary">{{ recipe.difficulty }}</span>
+                    <span class="text-muted"><i class="fas fa-clock me-1"></i> {{ recipe.cooking_time }} min</span>
+                </div>
+                <p class="card-text text-muted">{{ recipe.ingredients[:100] }}...</p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">View Recipe</a>
+                <button class="btn btn-outline-danger btn-sm float-end" onclick="removeFavorite({{ recipe.id }})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-heart fa-4x text-muted mb-3"></i>
+    <h4 class="text-muted">No favorite recipes yet</h4>
+    <p class="text-muted">Start exploring recipes and add them to your favorites!</p>
+    <a href="{{ url_for('search') }}" class="btn btn-primary">Browse Recipes</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Remove favorite
+    async function removeFavorite(recipeId) {
+        try {
+            const response = await fetch(`/toggle_favorite/${recipeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                // Remove the card from view
+                const card = document.querySelector(`button[onclick="removeFavorite(${recipeId})"]`).closest('.col-md-6');
+                if (card) {
+                    card.remove();
+
+                    // Show message if no favorites left
+                    if (document.querySelectorAll('.recipe-card').length === 0) {
+                        location.reload();
+                    }
+                }
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error removing favorite:', error);
+        }
+    }
+</script>
+{% endblock %}

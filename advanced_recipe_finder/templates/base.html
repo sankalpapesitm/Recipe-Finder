@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Advanced Recipe Finder{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark-theme-effects.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/3d-effects.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ambient-effects.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdown.css') }}">
+    
+    {% block extra_css %}
+<style>
+/* Global Modern UI Styles */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.bg-gradient-success {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+}
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 15px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.btn {
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.display-4 {
+    font-size: 3rem;
+    font-weight: 300;
+}
+
+.display-6 {
+    font-size: 2rem;
+    font-weight: 300;
+}
+
+.list-group-item {
+    border: none;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    transition: all 0.3s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.navbar {
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.badge {
+    border-radius: 20px;
+}
+
+.progress {
+    border-radius: 10px;
+    height: 8px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2.5rem;
+    }
+
+    .display-6 {
+        font-size: 1.8rem;
+    }
+
+    .fa-3x {
+        font-size: 2rem;
+    }
+
+    .card:hover {
+        transform: none;
+    }
+
+    .btn:hover {
+        transform: none;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+</style>
+{% endblock %}
+</head>
+<body>
+
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                <i class="fas fa-utensils me-2"></i>
+                <span class="fw-bold">RecipeFinder</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('search') }}">Recipes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('ai_recipe_generator') }}">AI Chef</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('meal_planner') }}">Meal Planner</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('nutrition_helper') }}">Nutrition Helper</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chatbot') }}">Chat Assistant</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                {% if session.user_id %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-1"></i> {{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            {% if session.is_admin %}
+                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-chart-line"></i>Admin Dashboard</a></li>
+                            {% else %}
+                            <li><a class="dropdown-item" href="{{ url_for('user_dashboard') }}"><i class="fas fa-columns"></i>My Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('user_favorites') }}"><i class="fas fa-heart"></i>My Favorites</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('my_diet_plan') }}"><i class="fas fa-leaf"></i>My Diet Plan</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('user_profile') }}"><i class="fas fa-user-circle"></i>My Profile</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show reveal-on-scroll" data-animation="slideIn" data-delay="{{ loop.index0 * 0.1 }}" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="{% block main_class %}container my-4{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+            <div class="col-md-4">
+                <h5 class="text-light">RecipeFinder</h5>
+                <p>Discover, create, and enjoy delicious recipes with our AI-powered platform.</p>
+            </div>
+            <div class="col-md-2">
+                <h5 class="text-light">Links</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{{ url_for('index') }}" class="text-light">Home</a></li>
+                    <li><a href="{{ url_for('search') }}" class="text-light">Recipes</a></li>
+                    <li><a href="{{ url_for('nutrition_helper') }}" class="text-light">nutrition_helper</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h5 class="text-light">Tools</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{{ url_for('meal_planner') }}" class="text-light">Meal Planner</a></li>
+                    <li><a href="{{ url_for('ai_recipe_generator') }}" class="text-light">AI Chef</a></li>
+                    <li><a href="{{ url_for('chatbot') }}" class="text-light">Chat Assistant</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h5 class="text-light">Subscribe</h5>
+                    <p>Get weekly recipe inspiration delivered to your inbox.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control" placeholder="Your email">
+                        <button class="btn btn-primary">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center">
+                <p>&copy; 2025 RecipeFinder. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <!-- Framer Motion (for animations) -->
+    <script src="https://unpkg.com/framer-motion/dist/framer-motion.js" defer></script>
+    <!-- Theme Management -->
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+    <!-- Animation System -->
+    <script src="{{ url_for('static', filename='js/animations.js') }}" defer></script>
+
+    <!-- Main JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    
+    {% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const notificationsContainer = document.getElementById('notifications-container');
+        const notificationCount = document.getElementById('notification-count');
+
+        function fetchNotifications() {
+            fetch("{{ url_for('get_notifications') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        notificationCount.textContent = data.length;
+                        let notificationsHtml = '';
+                        data.forEach(notification => {
+                            notificationsHtml += `<a class="dropdown-item" href="#" data-id="${notification.id}">${notification.message}</a>`;
+                        });
+                        notificationsContainer.innerHTML = notificationsHtml;
+                    } else {
+                        notificationCount.textContent = 0;
+                        notificationsContainer.innerHTML = '<a class="dropdown-item" href="#">No new notifications</a>';
+                    }
+                });
+        }
+
+        notificationsContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('dropdown-item')) {
+                const notificationId = e.target.dataset.id;
+                if (notificationId) {
+                    fetch("{{ url_for('get_notifications') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ notification_id: notificationId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            fetchNotifications();
+                        }
+                    });
+                }
+            }
+        });
+
+        fetchNotifications();
+    });
+</script>
+{% endblock %}
+</body>
+</html>

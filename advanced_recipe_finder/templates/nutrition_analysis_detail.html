@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Analysis Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h1 class="h4 mb-0">Nutrition Analysis</h1>
+                    <div class="action-buttons">
+                        {% if 'user_id' in session %}
+                        {% endif %}
+                        <button class="btn btn-light btn-sm me-2" onclick="generatePDF('analysisContent', 'nutrition_analysis.pdf')">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="analysisContent">
+                    <h5>Ingredients Analyzed:</h5>
+                    <p class="text-muted">{{ analysis.ingredients|fromjson }}</p>
+                    <hr>
+                    <div class="analysis-content">{{ analysis.analysis|fromjson|format_analysis|safe }}</div>
+                    <hr>
+                    <small class="text-muted">Analyzed on {{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Analysis Modal -->
+    <div class="modal fade" id="saveAnalysisModal" tabindex="-1" role="dialog" aria-labelledby="saveAnalysisModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveAnalysisModalLabel">Save Nutrition Analysis</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="analysisNameInput">Enter a name for this nutrition analysis:</label>
+                        <input type="text" class="form-control" id="analysisNameInput" placeholder="Analysis name" required>
+                        <div class="invalid-feedback" id="nameError" style="display: none;">
+                            Please enter a valid name.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveAnalysisConfirmBtn" disabled>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
+<script>
+var parsed = {{ analysis.ingredients | fromjson | tojson }};
+var analysisData = {
+    ingredients: parsed.ingredients,
+    analysis: parsed.analysis
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Save nutrition analysis functionality
+    const saveNutritionBtn = document.getElementById('saveNutritionBtn');
+    const saveAnalysisModal = new bootstrap.Modal(document.getElementById('saveAnalysisModal'));
+    const analysisNameInput = document.getElementById('analysisNameInput');
+    const saveAnalysisConfirmBtn = document.getElementById('saveAnalysisConfirmBtn');
+    const nameError = document.getElementById('nameError');
+
+    if (saveNutritionBtn) {
+        saveNutritionBtn.addEventListener('click', function() {
+            saveAnalysisModal.show();
+        });
+    }
+
+    saveAnalysisConfirmBtn.addEventListener('click', function() {
+        const analysisName = analysisNameInput.value.trim();
+
+        if (!analysisName) {
+            nameError.style.display = 'block';
+            analysisNameInput.classList.add('is-invalid');
+            alert('Please enter a name for the nutrition analysis.');
+            return;
+        }
+
+        nameError.style.display = 'none';
+        analysisNameInput.classList.remove('is-invalid');
+
+        if (typeof analysisData === 'undefined') {
+            alert('No analysis to save.');
+            return;
+        }
+
+        const analysisDataPayload = {
+            analysis_name: analysisName,
+            analysis_data: JSON.stringify(analysisData)
+        };
+
+        // Disable the save button to prevent multiple saves
+        saveAnalysisConfirmBtn.disabled = true;
+        saveAnalysisConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        fetch('/save_nutrition_analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(analysisDataPayload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Nutrition analysis saved successfully!');
+                saveAnalysisModal.hide();
+                // Reload the page to update the history if needed
+                location.reload();
+            } else {
+                alert('Error saving analysis: ' + data.error);
+                // Re-enable button on error
+                saveAnalysisConfirmBtn.disabled = false;
+                saveAnalysisConfirmBtn.innerHTML = 'Save';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving analysis: ' + error.message);
+            // Re-enable button on error
+            saveAnalysisConfirmBtn.disabled = false;
+            saveAnalysisConfirmBtn.innerHTML = 'Save';
+        });
+    });
+
+    // Clear validation when user starts typing
+    analysisNameInput.addEventListener('input', function() {
+        const value = analysisNameInput.value.trim();
+        nameError.style.display = 'none';
+        analysisNameInput.classList.remove('is-invalid');
+        saveAnalysisConfirmBtn.disabled = value === '';
+    });
+
+    // Initialize button state
+    saveAnalysisConfirmBtn.disabled = true;
+
+    // Clear modal when hidden
+    document.getElementById('saveAnalysisModal').addEventListener('hidden.bs.modal', function() {
+        analysisNameInput.value = '';
+        nameError.style.display = 'none';
+        analysisNameInput.classList.remove('is-invalid');
+        saveAnalysisConfirmBtn.disabled = true;
+        saveAnalysisConfirmBtn.innerHTML = 'Save';
+    });
+});
+
+// Simple print styles
+const style = document.createElement('style');
+style.innerHTML = `
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #analysisContent, #analysisContent * {
+            visibility: visible;
+        }
+        #analysisContent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .btn, .card-header .btn, .card-header a, form, .modal, .action-buttons, .card-header {
+            display: none !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

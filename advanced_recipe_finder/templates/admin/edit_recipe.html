@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    {% if recipe %}Edit Recipe{% else %}Add New Recipe{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Recipe Title</label>
+                        <input type="text" class="form-control" id="title" name="title" value="{{ recipe.title if recipe }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ingredients" class="form-label">Ingredients</label>
+                        <textarea class="form-control" id="ingredients" name="ingredients" rows="5" required>{{ recipe.ingredients if recipe }}</textarea>
+                        <div class="form-text">Enter each ingredient on a new line, or separate with commas</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="instructions" class="form-label">Instructions</label>
+                        <textarea class="form-control" id="instructions" name="instructions" rows="8" required>{{ recipe.instructions if recipe }}</textarea>
+                        <div class="form-text">Enter each step on a new line</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="cooking_time" class="form-label">Cooking Time (minutes)</label>
+                            <input type="number" class="form-control" id="cooking_time" name="cooking_time" value="{{ recipe.cooking_time if recipe }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="difficulty" class="form-label">Difficulty</label>
+                            <select class="form-select" id="difficulty" name="difficulty" required>
+                                <option value="">Select difficulty</option>
+                                <option value="Easy" {% if recipe and recipe.difficulty == 'Easy' %}selected{% endif %}>Easy</option>
+                                <option value="Medium" {% if recipe and recipe.difficulty == 'Medium' %}selected{% endif %}>Medium</option>
+                                <option value="Hard" {% if recipe and recipe.difficulty == 'Hard' %}selected{% endif %}>Hard</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select category</option>
+                                <option value="Main Course" {% if recipe and recipe.category == 'Main Course' %}selected{% endif %}>Main Course</option>
+                                <option value="Dessert" {% if recipe and recipe.category == 'Dessert' %}selected{% endif %}>Dessert</option>
+                                <option value="Appetizer" {% if recipe and recipe.category == 'Appetizer' %}selected{% endif %}>Appetizer</option>
+                                <option value="Salad" {% if recipe and recipe.category == 'Salad' %}selected{% endif %}>Salad</option>
+                                <option value="Soup" {% if recipe and recipe.category == 'Soup' %}selected{% endif %}>Soup</option>
+                                <option value="Breakfast" {% if recipe and recipe.category == 'Breakfast' %}selected{% endif %}>Breakfast</option>
+                                <option value="Snack" {% if recipe and recipe.category == 'Snack' %}selected{% endif %}>Snack</option>
+                                <option value="Beverage" {% if recipe and recipe.category == 'Beverage' %}selected{% endif %}>Beverage</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Recipe Image</label>
+                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        {% if recipe and recipe.image_url %}
+                        <div class="mt-2">
+                            <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" alt="Current image" class="img-thumbnail" width="150" loading="lazy">
+                            <input type="hidden" name="current_image" value="{{ recipe.image_url }}">
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('manage_recipes') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            {% if recipe %}Update Recipe{% else %}Add Recipe{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

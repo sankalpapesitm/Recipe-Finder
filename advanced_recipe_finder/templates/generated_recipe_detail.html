@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ generated_recipe.recipe_data.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4" id="recipe-card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ generated_recipe.recipe_data.title }}</h5>
+                    <div>
+                        <button id="save-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-save"></i> Save</button>
+                        <button id="download-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-download"></i> Download</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if generated_recipe.recipe_data.image_url %}
+                    <img src="{{ generated_recipe.recipe_data.image_url if generated_recipe.recipe_data.image_url.startswith('http') else url_for('uploaded_file', filename=generated_recipe.recipe_data.image_url) }}" class="img-fluid rounded mb-4" alt="{{ generated_recipe.recipe_data.title }}" loading="lazy">
+                    {% else %}
+                    <div id="image-generation-section" class="text-center mb-4">
+                        <div id="image-placeholder" class="bg-light rounded" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                            <p class="text-muted">No image generated yet.</p>
+                        </div>
+                        <button id="generate-image-btn" class="btn btn-secondary mt-2">
+                            <i class="fas fa-image me-2"></i>Generate Image
+                        </button>
+                        <div id="image-loader" class="spinner-border text-primary mt-2" role="status" style="display: none;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <p class="text-center text-muted mb-4">{{ generated_recipe.recipe_data.description or '' }}</p>
+
+                    <div class="d-flex justify-content-around text-center mb-4 p-2 bg-light rounded">
+                        <span><i class="fas fa-clock me-1"></i> {{ generated_recipe.recipe_data.cooking_time }}</span>
+                        <span><i class="fas fa-tachometer-alt me-1"></i> {{ generated_recipe.recipe_data.difficulty }}</span>
+                        <span><i class="fas fa-tag me-1"></i> {{ generated_recipe.recipe_data.category }}</span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h5>Ingredients</h5>
+                            <ul class="list-group list-group-flush mb-3">
+                                {% for ingredient in generated_recipe.recipe_data.ingredients %}
+                                <li class="list-group-item">{{ ingredient }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-7">
+                            <h5>Instructions</h5>
+                            <ol class="list-group list-group-numbered">
+                                {% for step in generated_recipe.recipe_data.instructions %}
+                                <li class="list-group-item">{{ step }}</li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                    </div>
+
+                    {% if generated_recipe.recipe_data.nutritional_info %}
+                    <div class="mt-4">
+                        <h5>Nutritional Information (per serving)</h5>
+                        <div class="d-flex flex-wrap justify-content-center text-center">
+                            {% for key, value in generated_recipe.recipe_data.nutritional_info.items() %}
+                            <div class="p-2 m-1 bg-light rounded">
+                                <strong class="text-capitalize">{{ key.replace('_', ' ') }}:</strong> {{ value }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="saveRecipeForm" style="display: none;">
+    <input type="hidden" name="recipe_data" id="recipeDataInput">
+    <input type="hidden" name="image_url" id="imageUrlInput">
+    <input type="hidden" name="image_prompt" id="imagePromptInput">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
+<script>
+const generatedRecipe = {{ generated_recipe.recipe_data | tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Download Recipe button logic
+    const downloadBtn = document.getElementById('download-recipe-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            const filename = `${generatedRecipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_recipe.pdf`;
+            generatePDF('recipe-card', filename);
+        });
+    }
+
+    // Save Recipe button logic
+    const saveBtn = document.getElementById('save-recipe-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            const recipeDataInput = document.getElementById('recipeDataInput');
+            recipeDataInput.value = JSON.stringify(generatedRecipe);
+
+            const formData = new FormData(document.getElementById('saveRecipeForm'));
+
+            if (!document.getElementById('imageUrlInput').value) {
+                alert('Please generate an image before saving.');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
+            fetch('{{ url_for("save_generated_recipe") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the recipe.');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                // Hide the save button after successful save
+                saveBtn.style.display = 'none';
+            });
+        });
+    }
+
+    // Generate Image button logic
+    const generateImageBtn = document.getElementById('generate-image-btn');
+    const imagePlaceholder = document.getElementById('image-placeholder');
+    const imageLoader = document.getElementById('image-loader');
+
+    if (generateImageBtn) {
+        generateImageBtn.addEventListener('click', function() {
+            generateImageBtn.style.display = 'none';
+            imageLoader.style.display = 'block';
+
+            fetch('{{ url_for("generate_recipe_image_endpoint") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: generatedRecipe.title, ingredients: generatedRecipe.ingredients.join(', ') })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_url) {
+                    // Update the recipe in the database
+                    fetch('{{ url_for("update_generated_recipe_image", generated_recipe_id=generated_recipe.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ image_url: data.image_url, image_prompt: data.image_prompt })
+                    })
+                    .then(updateResponse => updateResponse.json())
+                    .then(updateData => {
+                        if (updateData.status === 'success') {
+                            // Replace the placeholder with the image
+                            imagePlaceholder.innerHTML = `<img src="${data.image_url}" class="img-fluid rounded mb-4" alt="${generatedRecipe.title}" loading="lazy">`;
+                            // Set hidden form inputs for saving
+                            document.getElementById('imageUrlInput').value = data.image_url;
+                            document.getElementById('imagePromptInput').value = data.image_prompt;
+                            // Hide the loader
+                            imageLoader.style.display = 'none';
+                        } else {
+                            imagePlaceholder.innerHTML = `<p class="text-danger">Error updating recipe: ${updateData.error}</p>`;
+                            imageLoader.style.display = 'none';
+                        }
+                    })
+                    .catch(updateError => {
+                        console.error('Error updating recipe:', updateError);
+                        imagePlaceholder.innerHTML = `<p class="text-danger">An error occurred while updating the recipe.</p>`;
+                        imageLoader.style.display = 'none';
+                    });
+                } else {
+                    imagePlaceholder.innerHTML = `<p class="text-danger">Error generating image: ${data.error}</p>`;
+                    imageLoader.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                imagePlaceholder.innerHTML = `<p class="text-danger">An error occurred while generating the image.</p>`;
+                imageLoader.style.display = 'none';
+            });
+        });
+    }
+});
+
+// Simple print styles
+const style = document.createElement('style');
+style.innerHTML = `
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .card, .card * {
+            visibility: visible;
+        }
+        .card {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .btn, .card-header a, form, .modal {
+            display: none !important;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

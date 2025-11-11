@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Meal Plan Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ meal_plan.plan_name or 'Meal Plan' }}</h5>
+                    <div>
+                        <button class="btn btn-light btn-sm me-2" onclick="generatePDF('mealPlanDetail', 'meal_plan_detail.pdf')">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="mealPlanDetail">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p class="text-center text-muted mb-4">{{ meal_plan.goal or 'Custom Goal' }}</p>
+                            <p class="text-center text-muted mb-4">Created on {{ meal_plan.created_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </div>
+
+                    {% for day in meal_plan.plan_data.days %}
+                    <div class="mb-4">
+                        <h4 class="text-primary">{{ day.day }}</h4>
+                        <hr>
+                        {% for meal in day.meals %}
+                        <div class="meal-item mb-3 p-3 bg-light rounded">
+                            <h6 class="d-flex align-items-center">
+                                <span class="text-primary fw-bold me-2">{{ meal.type }}</span>
+                                <span>{{ meal.name }}</span>
+                            </h6>
+                            <p class="small text-muted">{{ meal.description }}</p>
+                            <p class="small"><strong>Prep Time:</strong> {{ meal.prep_time }}</p>
+                            <h6 class="mt-2">Ingredients:</h6>
+                            <ul class="list-unstyled small">
+                                {% for ingredient in meal.ingredients %}
+                                <li><i class="fas fa-shopping-basket me-2"></i>{{ ingredient }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
+<script>
+// Simple print styles
+const style = document.createElement('style');
+style.innerHTML = `
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #mealPlanDetail, #mealPlanDetail * {
+            visibility: visible;
+        }
+        #mealPlanDetail {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+        }
+        .btn, .card-header a, form, .modal {
+            display: none !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-header {
+            background-color: #fff !important;
+            color: #000 !important;
+            border-bottom: 2px solid #000;
+            padding: 0 0 10px 0 !important;
+            margin-bottom: 20px !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+        .mb-4 {
+            margin-bottom: 30px !important;
+            padding-bottom: 20px !important;
+            border-bottom: 1px solid #eee;
+            page-break-inside: avoid;
+        }
+        .mb-4:last-child {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+            border-bottom: none;
+        }
+        .meal-item {
+            margin-bottom: 15px !important;
+            padding: 15px !important;
+            page-break-inside: avoid;
+        }
+        .meal-item:last-child {
+            margin-bottom: 0 !important;
+        }
+        hr {
+            margin: 15px 0 !important;
+            border-color: #eee;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

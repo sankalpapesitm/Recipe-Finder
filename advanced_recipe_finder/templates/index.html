@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section bg-gradient-primary text-white py-5 mb-5 rounded shadow-lg animate__animated animate__fadeInUp">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4 animate__animated animate__fadeInLeft">
+                    <i class="fas fa-utensils me-3 text-warning"></i>Discover Amazing Recipes
+                </h1>
+                <p class="lead mb-4 animate__animated animate__fadeInLeft animate__delay-1s">Powered by AI to help you cook delicious meals, plan your diet, and explore new culinary experiences.</p>
+                <div class="d-flex flex-wrap gap-3 animate__animated animate__fadeInUp animate__delay-2s">
+                    <a href="{{ url_for('search') }}" class="btn btn-light btn-lg shadow-lg">
+                        <i class="fas fa-search me-2"></i>Explore Recipes
+                    </a>
+                    <a href="{{ url_for('ai_recipe_generator') }}" class="btn btn-outline-light btn-lg shadow-lg">
+                        <i class="fas fa-robot me-2"></i>AI Recipe Generator
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="position-relative animate__animated animate__fadeInRight animate__delay-1s">
+                    <img src="{{ url_for('static', filename='hero-image.png') }}" alt="Cooking illustration" class="img-fluid" style="max-height: 400px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3);" loading="lazy">
+                    <div class="position-absolute top-0 start-0 bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; margin: 20px;">
+                        <i class="fas fa-star text-warning fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section mb-5">
+    <div class="container">
+        {% if not session.user_id %}
+        <div class="alert alert-info text-center mb-5 shadow-lg animate__animated animate__fadeInDown" style="border-radius: 15px;">
+            <h4><i class="fas fa-info-circle me-2"></i>Login Required for Premium Features</h4>
+            <p class="mb-3">To access AI Recipe Generator, Meal Planner, Nutrition Helper, and Chat Assistant, please <a href="{{ url_for('login') }}" class="alert-link fw-bold">login</a> or <a href="{{ url_for('register') }}" class="alert-link fw-bold">create an account</a>.</p>
+        </div>
+        {% endif %}
+        
+        <h2 class="text-center mb-5 display-6 fw-bold animate__animated animate__fadeInUp">
+            <i class="fas fa-star text-warning me-2"></i>Premium Features{% if not session.user_id %} (Login Required){% endif %}
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card h-100 shadow-lg animate__animated animate__fadeInUp animate__delay-1s border-0 {% if not session.user_id %}opacity-75{% endif %}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-robot fa-3x mb-3"></i>
+                        <h5 class="card-title fw-bold">AI Recipe Generator</h5>
+                        <p class="card-text">Create custom recipes based on your ingredients and dietary preferences using advanced AI.</p>
+                        {% if not session.user_id %}
+                        <div class="mt-3">
+                            <i class="fas fa-lock text-warning"></i>
+                            <small class="d-block">Requires Login</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-lg animate__animated animate__fadeInUp animate__delay-2s border-0 {% if not session.user_id %}opacity-75{% endif %}" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-apple-alt fa-3x mb-3"></i>
+                        <h5 class="card-title fw-bold">Nutrition Helper</h5>
+                        <p class="card-text">Analyze nutritional content of ingredients and get personalized dietary recommendations.</p>
+                        {% if not session.user_id %}
+                        <div class="mt-3">
+                            <i class="fas fa-lock text-warning"></i>
+                            <small class="d-block">Requires Login</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-lg animate__animated animate__fadeInUp animate__delay-3s border-0 {% if not session.user_id %}opacity-75{% endif %}" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                        <h5 class="card-title fw-bold">Meal Planner</h5>
+                        <p class="card-text">Plan your meals for the week and generate shopping lists automatically based on your preferences.</p>
+                        {% if not session.user_id %}
+                        <div class="mt-3">
+                            <i class="fas fa-lock text-warning"></i>
+                            <small class="d-block">Requires Login</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-lg animate__animated animate__fadeInUp animate__delay-4s border-0 {% if not session.user_id %}opacity-75{% endif %}" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333;">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <h5 class="card-title fw-bold">Chat Assistant</h5>
+                        <p class="card-text">Get instant cooking advice and recipe suggestions from our intelligent chat assistant.</p>
+                        {% if not session.user_id %}
+                        <div class="mt-3">
+                            <i class="fas fa-lock text-warning"></i>
+                            <small class="d-block">Requires Login</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Recipes -->
+<section class="featured-recipes mb-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold animate__animated animate__fadeInLeft">
+                <i class="fas fa-fire text-danger me-2"></i>Featured Recipes
+            </h2>
+            <a href="{{ url_for('search') }}" class="btn btn-outline-primary shadow-lg animate__animated animate__fadeInRight">
+                <i class="fas fa-arrow-right me-2"></i>View All
+            </a>
+        </div>
+
+        <div class="row g-4">
+            {% for recipe in featured_recipes %}
+            <div class="col-md-4">
+                <div class="card h-100 recipe-card shadow-lg animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s; border-radius: 20px; overflow: hidden;">
+                    {% if recipe.image_url %}
+                    <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" class="card-img-top" alt="{{ recipe.title }}" loading="lazy" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-utensils fa-3x text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">{{ recipe.title }}</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-gradient-primary text-white shadow-sm">{{ recipe.difficulty }}</span>
+                            <span class="text-muted fw-bold"><i class="fas fa-clock me-1"></i> {{ recipe.cooking_time }} min</span>
+                        </div>
+                        <p class="card-text text-muted">{{ recipe.ingredients[:100] }}...</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-primary shadow">
+                                <i class="fas fa-eye me-1"></i>View Recipe
+                            </a>
+                            {% if session.user_id and not session.is_admin %}
+                            <button class="btn btn-outline-danger shadow" onclick="toggleFavorite({{ recipe.id }})">
+                                <i class="far fa-heart"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="animate__animated animate__fadeInUp">
+                    <div class="bg-gradient-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 100px; height: 100px;">
+                        <i class="fas fa-utensils fa-2x text-white"></i>
+                    </div>
+                    <h4 class="text-muted fw-bold">No recipes available</h4>
+                    <p class="text-muted">Check back later for new recipes!</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section bg-gradient-info text-white py-5 rounded shadow-lg animate__animated animate__fadeInUp">
+    <div class="container text-center py-4">
+        <div class="mb-4">
+            <i class="fas fa-rocket fa-3x text-warning mb-3 animate__animated animate__bounce"></i>
+        </div>
+        <h2 class="mb-4 display-6 fw-bold">Ready to Start Your Culinary Journey?</h2>
+        <p class="lead mb-4">Join thousands of users who are already enjoying delicious meals with RecipeFinder</p>
+        {% if session.user_id %}
+        <a href="{{ url_for('search') }}" class="btn btn-light btn-lg shadow-lg">
+            <i class="fas fa-search me-2"></i>Explore Recipes
+        </a>
+        {% else %}
+        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg me-3 shadow-lg">
+            <i class="fas fa-rocket me-2"></i>Get Started
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg shadow-lg">
+            <i class="fas fa-sign-in-alt me-2"></i>Login
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize favorite buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if session.user_id %}
+        // Check and set favorite status for each recipe
+        {% for recipe in featured_recipes %}
+        checkFavoriteStatus({{ recipe.id }});
+        {% endfor %}
+        {% endif %}
+    });
+
+    // Check favorite status for a recipe
+    async function checkFavoriteStatus(recipeId) {
+        try {
+            const response = await fetch(`/check_favorite/${recipeId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.is_favorite) {
+                    const button = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`);
+                    if (button) {
+                        button.classList.remove('btn-outline-primary');
+                        button.classList.add('btn-primary');
+                        button.querySelector('i').classList.replace('far', 'fas');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking favorite status:', error);
+        }
+    }
+
+    // Toggle favorite status for a recipe
+    async function toggleFavorite(recipeId) {
+        try {
+            const response = await fetch(`/toggle_favorite/${recipeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                const button = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`);
+                if (button) {
+                    if (data.action === 'added') {
+                        button.classList.remove('btn-outline-primary');
+                        button.classList.add('btn-primary');
+                        button.querySelector('i').classList.replace('far', 'fas');
+                    } else {
+                        button.classList.remove('btn-primary');
+                        button.classList.add('btn-outline-primary');
+                        button.querySelector('i').classList.replace('fas', 'far');
+                    }
+                }
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    }
+</script>
+{% endblock %}

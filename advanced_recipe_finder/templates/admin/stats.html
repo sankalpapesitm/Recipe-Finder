@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-grow-1 admin-stats">
+    <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <h2 class="text-primary fw-bold">Statistics & Reports</h2>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('generate_report') }}?type=users&format=pdf" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-download me-1"></i>Export Users (PDF)
+            </a>
+            <a href="{{ url_for('generate_report') }}?type=recipes&format=pdf" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-download me-1"></i>Export Recipes (PDF)
+            </a>
+        </div>
+    </div>
+
+    <style>
+    /* Dark theme overrides for admin stats */
+    [data-theme="dark"] .admin-stats .progress {
+        background-color: #2a3855 !important;
+    }
+
+    [data-theme="dark"] .admin-stats .progress-bar {
+        background-color: #4f7fff !important;
+    }
+
+    [data-theme="dark"] .admin-stats .progress-bar.bg-success {
+        background-color: #00e5a0 !important;
+    }
+
+    [data-theme="dark"] .admin-stats .table {
+        background: #151c2e !important;
+        border-color: #2a3855 !important;
+    }
+
+    [data-theme="dark"] .admin-stats .table th {
+        background: #1e2a45 !important;
+        border-color: #2a3855 !important;
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .admin-stats .table td {
+        border-color: #2a3855 !important;
+        color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .admin-stats .table-hover tbody tr:hover {
+        background: #1e2a45 !important;
+    }
+    </style>
+
+    <div class="row g-4">
+        <!-- User Registration Stats -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>User Registration Trends (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    {% if user_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Registrations</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in user_stats %}
+                                <tr>
+                                    <td>{{ stat.date.strftime('%m/%d/%Y') }}</td>
+                                    <td><span class="badge bg-primary">{{ stat.count }}</span></td>
+                                    <td>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ (stat.count / (user_stats|map(attribute='count')|max)) * 100 }}%"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No registration data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Creation Stats -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-utensils me-2"></i>Recipe Creation Trends (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    {% if recipe_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Recipes Added</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in recipe_stats %}
+                                <tr>
+                                    <td>{{ stat.date.strftime('%m/%d/%Y') }}</td>
+                                    <td><span class="badge bg-success">{{ stat.count }}</span></td>
+                                    <td>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ (stat.count / (recipe_stats|map(attribute='count')|max)) * 100 }}%"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No recipe data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Reviews Stats -->
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-star me-2"></i>Recipe Ratings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Recipe Name</th>
+                                    <th>User Name</th>
+                                    <th>Rating</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                <tr>
+                                    <td>{{ review.recipe_title }}</td>
+                                    <td>{{ review.username }}</td>
+                                    <td>
+                                        <div class="rating">
+                                            {% for i in range(1, 6) %}
+                                                {% if i <= review.rating %}
+                                                    <i class="fas fa-star text-warning"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-warning"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <span class="ms-1">{{ review.rating }}/5</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ review.created_at.strftime('%m/%d/%Y %H:%M') }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('delete_review', review_id=review.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this review?')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if not reviews %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No reviews available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,224 @@
+/* Shared 3D Animations for Both Themes - 2025 Edition */
+
+/* Base 3D settings for all elements */
+.transform-3d {
+    transform-style: preserve-3d;
+    perspective: var(--perspective);
+    backface-visibility: hidden;
+}
+
+/* Card 3D Effects */
+.card {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface-color);
+    box-shadow: var(--card-shadow);
+}
+
+.card:hover {
+    transform: translateY(calc(var(--depth-1) * -1)) rotateX(var(--rotate-sm));
+    box-shadow: var(--card-shadow-hover);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--primary-color-rgb), calc(var(--glow-strength) * 0.1)),
+        rgba(var(--accent-color-rgb), calc(var(--glow-strength) * 0.1))
+    );
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    border-radius: inherit;
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+/* Button 3D Effects */
+.btn {
+    transform-style: preserve-3d;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: var(--button-shadow);
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, calc(var(--glow-strength) * 2)),
+        transparent
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: inherit;
+}
+
+.btn:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+.btn:hover::before {
+    opacity: 1;
+}
+
+.btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+/* Image Container 3D Effects */
+.img-container-3d {
+    transform-style: preserve-3d;
+    perspective: var(--perspective);
+    overflow: hidden;
+    position: relative;
+}
+
+.img-container-3d img {
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.img-container-3d:hover img {
+    transform: scale(1.05) translateZ(var(--depth-2));
+}
+
+/* List Item 3D Effects */
+.list-item-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+    position: relative;
+}
+
+.list-item-3d:hover {
+    transform: translateX(var(--depth-1)) translateZ(var(--depth-1));
+}
+
+/* Form Input 3D Effects */
+.form-control, .form-select {
+    transform-style: preserve-3d;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+}
+
+.form-control:focus, .form-select:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), var(--glow-strength));
+}
+
+/* Navigation 3D Effects */
+.nav-link {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+}
+
+.nav-link:hover {
+    transform: translateZ(var(--depth-1));
+}
+
+.nav-link.active {
+    transform: translateZ(var(--depth-2));
+}
+
+/* Grid Layout 3D Effects */
+.grid-3d {
+    display: grid;
+    gap: 1rem;
+    transform-style: preserve-3d;
+    perspective: var(--perspective);
+}
+
+.grid-3d > * {
+    transform: translateZ(0);
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grid-3d > *:hover {
+    transform: translateZ(var(--depth-2)) scale(1.02);
+    z-index: 1;
+}
+
+/* Modal 3D Effects */
+.modal-content {
+    transform-style: preserve-3d;
+    transform: translateZ(var(--depth-3));
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.show .modal-content {
+    transform: translateZ(0);
+}
+
+/* Dropdown 3D Effects */
+.dropdown-menu {
+    transform-style: preserve-3d;
+    transform: translateY(-10px) translateZ(-20px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    background: var(--surface-color);
+    box-shadow: var(--card-shadow);
+    z-index: 1050;
+}
+
+.dropdown-menu.show {
+    transform: translateY(0) translateZ(0);
+}
+
+.dropdown-item {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-item:hover {
+    transform: translateX(var(--depth-1)) translateZ(var(--depth-1));
+    background: var(--hover-bg);
+}
+
+/* Section 3D Effects */
+.section-3d {
+    transform-style: preserve-3d;
+    perspective: var(--perspective);
+    position: relative;
+}
+
+.section-3d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        45deg,
+        rgba(var(--primary-color-rgb), calc(var(--glow-strength) * 0.05)),
+        rgba(var(--accent-color-rgb), calc(var(--glow-strength) * 0.05))
+    );
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.section-3d:hover::before {
+    opacity: 1;
+}
+
+/* Recipe Card Special Effects */
+.recipe-card {
+    transform-style: preserve-3d;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recipe-card:hover {
+    transform: translateY(calc(var(--depth-2) * -1)) rotateX(var(--rotate-sm)) rotateY(var(--rotate-sm));
+}
+
+.recipe-card .card-img-top {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recipe-card:hover .card-img-top {
+    transform: translateZ(var(--depth-2)) scale(1.1);
+}

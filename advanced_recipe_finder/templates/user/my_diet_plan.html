@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}My Diet Plan{% endblock %}
+
+{% block main_class %}container my-4{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex-grow: 1;
+}
+
+footer {
+    margin-top: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set has_saved_plans = diet_plans | selectattr('id') | list | length > 0 %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Diet Plans</h1>
+        {% if has_saved_plans %}
+        <div class="d-flex">
+            <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary me-2">Dashboard</a>
+            <a href="{{ url_for('user_favorites') }}" class="btn btn-secondary me-2">Favorites</a>
+            <div class="dropdown me-2">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                    Switch Plan
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                    {% for plan in diet_plans %}
+                        <li><a class="dropdown-item" href="#plan-{{ plan.id }}">{{ plan.plan_name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <a href="{{ url_for('diet_planner') }}" class="btn btn-primary">Create New Plan</a>
+        </div>
+        {% else %}
+        <div class="d-flex">
+            <a href="{{ url_for('diet_planner') }}" class="btn btn-primary">Create New Plan</a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if diet_plans %}
+        {% for plan in diet_plans %}
+        <div class="card mb-4" id="plan-{{ plan.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ plan.plan_name }}</h4>
+                <div>
+                    {% if plan.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        <form method="POST" action="{{ url_for('my_diet_plan') }}" style="display: inline;">
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                            <input type="hidden" name="toggle_active" value="true">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('my_diet_plan') }}" style="display: inline;">
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                            <input type="hidden" name="toggle_active" value="true">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Set as Active</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <!-- Diet plan content will be displayed here with better alignment -->
+                </div>
+                <h5 class="card-title">Goal: {{ plan.goal }}</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Meal</th>
+                            <th>Name</th>
+                            <th>Ingredients</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for meal in plan.meals %}
+                        <tr>
+                            <td>{{ meal.day }}</td>
+                            <td>{{ meal.meal_type }}</td>
+                            <td>{{ meal.meal_name }}</td>
+                            <td>
+                                <ul>
+                                    {% for ingredient in meal.ingredients %}
+                                        <li>{{ ingredient }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer text-muted">
+                Created on: {{ plan.created_at.strftime('%Y-%m-%d') }}
+                {% if not plan.id %}
+                <form method="POST" action="{{ url_for('my_diet_plan') }}" style="display: inline; float: right;">
+                    <input type="hidden" name="plan_name" value="{{ plan.plan_name }}">
+                    <input type="hidden" name="goal" value="{{ plan.goal }}">
+                    <input type="hidden" name="meals" value='{{ plan.meals|tojson }}'>
+                    <button type="submit" class="btn btn-sm btn-primary">Save Plan</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('my_diet_plan') }}" style="display: inline; float: right; margin-right: 10px;">
+                    <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                    <input type="hidden" name="delete" value="true">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+                <button type="button" class="btn btn-sm btn-info" onclick="generatePDF('plan-{{ plan.id }}', '{{ plan.plan_name | replace(' ', '_') }}_diet_plan.pdf')">Download PDF</button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center">
+            <h3>You don't have any saved diet plans yet.</h3>
+            <a href="{{ url_for('diet_planner') }}" class="btn btn-primary mt-3">Create a Diet Plan</a>
+        </div>
+    {% endif %}
+</div>
+
+
+<!-- Share Modal -->
+{% for plan in diet_plans %}
+<div class="modal fade" id="shareModal-{{ plan.id }}" tabindex="-1" aria-labelledby="shareModalLabel-{{ plan.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shareModalLabel-{{ plan.id }}">Share {{ plan.plan_name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Share this link with others:</p>
+        <input type="text" class="form-control" value="{{ url_for('my_diet_plan', _external=True) }}#plan-{{ plan.id }}" readonly>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const planLinks = document.querySelectorAll('.dropdown-item');
+        const planCards = document.querySelectorAll('.card[id^="plan-"]');
+
+        // Show the first plan by default
+        if (planCards.length > 0) {
+            planCards.forEach((card, index) => {
+                if (index !== 0) {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        planLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                planCards.forEach(card => {
+                    if (('#' + card.id) === targetId) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Handle meal status checkboxes
+        const completedCheckboxes = document.querySelectorAll('input[id$="-completed"]');
+        const skippedCheckboxes = document.querySelectorAll('input[id$="-skipped"]');
+
+        function handleCheckboxChange(event) {
+            const checkbox = event.target;
+            const mealId = checkbox.id.split('-')[1];
+            const isCompleted = checkbox.id.endsWith('-completed');
+            const isSkipped = checkbox.id.endsWith('-skipped');
+
+            // Uncheck the other checkbox in the same row
+            const otherCheckbox = isCompleted ?
+                document.getElementById(`meal-${mealId}-skipped`) :
+                document.getElementById(`meal-${mealId}-completed`);
+
+            if (checkbox.checked && otherCheckbox) {
+                otherCheckbox.checked = false;
+            }
+
+            // Determine status
+            let status = null;
+            if (document.getElementById(`meal-${mealId}-completed`).checked) {
+                status = 'Completed';
+            } else if (document.getElementById(`meal-${mealId}-skipped`).checked) {
+                status = 'Skipped';
+            }
+
+            // Send update to server
+            fetch('/api/track_meal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    meal_id: mealId,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    console.error('Error updating meal status:', data.error);
+                    // Revert checkbox state on error
+                    checkbox.checked = !checkbox.checked;
+                    if (otherCheckbox) {
+                        otherCheckbox.checked = !otherCheckbox.checked;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert checkbox state on error
+                checkbox.checked = !checkbox.checked;
+                if (otherCheckbox) {
+                    otherCheckbox.checked = !otherCheckbox.checked;
+                }
+            });
+        }
+
+        // Add event listeners to checkboxes
+        completedCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', handleCheckboxChange);
+        });
+
+        skippedCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', handleCheckboxChange);
+        });
+
+        // Handle save plan button (batch save)
+        const saveButtons = document.querySelectorAll('.save-plan-btn');
+        saveButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const planId = this.getAttribute('data-plan-id');
+                const updates = [];
+
+                // Collect all checkbox states for this plan
+                const planCard = document.getElementById(`plan-${planId}`);
+                const checkboxes = planCard.querySelectorAll('input[type="checkbox"]');
+
+                checkboxes.forEach(checkbox => {
+                    if (checkbox.id.includes('-completed') || checkbox.id.includes('-skipped')) {
+                        const mealId = checkbox.id.split('-')[1];
+                        let status = null;
+
+                        if (document.getElementById(`meal-${mealId}-completed`).checked) {
+                            status = 'Completed';
+                        } else if (document.getElementById(`meal-${mealId}-skipped`).checked) {
+                            status = 'Skipped';
+                        }
+
+                        updates.push({
+                            meal_id: mealId,
+                            status: status
+                        });
+                    }
+                });
+
+                // Send batch update
+                fetch('/api/track_meals_batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        updates: updates
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Changes saved successfully!');
+                    } else {
+                        alert('Error saving changes: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error saving changes');
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

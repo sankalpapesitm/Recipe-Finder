@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .chat-card {
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+    }
+
+    .chat-container {
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        background-color: var(--bg-color);
+    }
+
+    [data-theme="dark"] .chat-messages {
+        background-color: var(--dark-bg);
+    }
+    
+    .message-wrapper {
+        margin-bottom: 1.5rem;
+        max-width: 80%;
+    }
+
+    .user-wrapper {
+        margin-left: auto;
+    }
+
+    .bot-wrapper {
+        margin-right: auto;
+    }
+    
+    .chat-message {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease-out;
+    }
+
+    .chat-message.message-shown {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .message-content {
+        padding: 1rem;
+        border-radius: 1.25rem;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .user-message .message-content {
+        background-color: var(--primary-color);
+        color: #FFFFFF;
+        border-radius: 1.25rem 1.25rem 0 1.25rem;
+        margin-left: auto;
+    }
+    
+    .bot-message .message-content {
+        background-color: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem 1.25rem 1.25rem 0;
+    }
+    
+    [data-theme="dark"] .bot-message .message-content {
+        background-color: var(--dark-elevated);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .message-sender {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: inherit;
+        opacity: 0.9;
+    }
+
+    .message-sender i {
+        font-size: 1rem;
+    }
+    
+    .message-text {
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: inherit;
+        text-align: right;
+        margin-top: 0.5rem;
+        opacity: 0.7;
+    }
+    
+    .chat-input {
+        background-color: var(--surface-color);
+        border-top: 1px solid var(--border-color);
+        padding: 1rem;
+    }
+
+    [data-theme="dark"] .chat-input {
+        background-color: var(--dark-elevated);
+        border-color: var(--dark-border);
+    }
+
+    .chat-input .input-group {
+        background: transparent;
+    }
+
+    .chat-input .form-control {
+        background-color: var(--bg-color);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        border-radius: 1rem 0 0 1rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+
+    [data-theme="dark"] .chat-input .form-control {
+        background-color: var(--dark-surface);
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+
+    [data-theme="dark"] .chat-input .form-control:focus {
+        border-color: var(--neon-primary);
+        box-shadow: 0 0 15px var(--glow-primary);
+    }
+
+    .chat-input .btn-primary {
+        border-radius: 0 1rem 1rem 0;
+        padding: 0.75rem 1.25rem;
+    }
+    
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0.8;
+    }
+    
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .typing-dots span {
+        width: 6px;
+        height: 6px;
+        background-color: currentColor;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+    }
+    
+    .quick-questions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 2rem 0 1rem;
+        padding: 1.25rem;
+        background-color: var(--surface-color);
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    [data-theme="dark"] .quick-questions {
+        background-color: var(--dark-elevated);
+        border-color: var(--dark-border);
+    }
+    
+    .quick-question {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: 2rem;
+        transition: all 0.2s ease;
+        background: transparent;
+    }
+
+    [data-theme="dark"] .quick-question {
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+
+    [data-theme="dark"] .quick-question:hover {
+        border-color: var(--neon-primary);
+        color: var(--neon-primary);
+        box-shadow: 0 0 15px var(--glow-primary);
+        transform: translateY(-2px);
+    }
+
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    [data-theme="dark"] .text-muted {
+        color: var(--dark-text-secondary) !important;
+    }
+</style>
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card chat-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Recipe Assistant</h5>
+                <button id="clearChatBtn" class="btn btn-sm btn-light">
+                    <i class="fas fa-trash me-1"></i> Clear Chat
+                </button>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message-wrapper bot-wrapper">
+                        <div class="chat-message bot-message welcome-message message-shown">
+                            <div class="message-content">
+                                <div class="message-sender">
+                                    <i class="fas fa-robot"></i>
+                                    <span class="sender-name">Recipe Assistant</span>
+                                </div>
+                                <div class="message-text">
+                                    Hi there! I'm your Recipe Assistant. I can help you with cooking tips, recipe suggestions, 
+                                    ingredient substitutions, and more. What would you like to know?
+                                </div>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-questions p-3">
+                        <span class="text-muted small">Try asking:</span>
+                        <button class="btn btn-outline-primary btn-sm quick-question">How do I make pasta?</button>
+                        <button class="btn btn-outline-primary btn-sm quick-question">What can I substitute for eggs?</button>
+                        <button class="btn btn-outline-primary btn-sm quick-question">Give me a quick dinner idea</button>
+                        <button class="btn btn-outline-primary btn-sm quick-question">How do I store fresh herbs?</button>
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <textarea 
+                                id="chatInput" 
+                                class="form-control" 
+                                placeholder="Ask me anything about cooking..." 
+                                rows="1"
+                                style="resize: none;"
+                            ></textarea>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+{% endblock %}

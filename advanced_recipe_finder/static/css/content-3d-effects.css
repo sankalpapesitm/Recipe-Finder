@@ -1,0 +1,180 @@
+/* Content-Specific 3D Animations - 2025 Edition */
+
+/* Recipe Details Page */
+.recipe-details {
+    transform-style: preserve-3d;
+    perspective: var(--perspective);
+}
+
+.recipe-hero-image {
+    transform: translateZ(var(--depth-1));
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recipe-hero-image:hover {
+    transform: translateZ(var(--depth-3)) scale(1.05);
+}
+
+.recipe-ingredients {
+    transform-style: preserve-3d;
+}
+
+.ingredient-item {
+    transform: translateZ(0);
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    border-radius: 0.375rem;
+}
+
+.ingredient-item:hover {
+    transform: translateX(var(--depth-1)) translateZ(var(--depth-1));
+    background: var(--hover-bg);
+}
+
+.recipe-instructions {
+    transform-style: preserve-3d;
+}
+
+.instruction-step {
+    transform: translateZ(0);
+    transition: all 0.4s ease;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.instruction-step:hover {
+    transform: translateZ(var(--depth-2));
+    box-shadow: var(--card-shadow);
+    border-color: var(--primary-color);
+}
+
+/* User Dashboard */
+.dashboard-card {
+    transform-style: preserve-3d;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover {
+    transform: translateY(calc(var(--depth-1) * -1)) rotateX(var(--rotate-sm));
+}
+
+.stats-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle,
+        rgba(var(--primary-color-rgb), calc(var(--glow-strength) * 0.1)) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+}
+
+.stats-card:hover::after {
+    opacity: 1;
+}
+
+/* Search Results */
+.search-result-card {
+    transform-style: preserve-3d;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-result-card:hover {
+    transform: translateX(var(--depth-1)) translateY(calc(var(--depth-1) * -1)) translateZ(var(--depth-1));
+}
+
+/* Profile Section */
+.profile-avatar {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-avatar:hover {
+    transform: rotateY(var(--rotate-sm)) translateZ(var(--depth-2));
+}
+
+/* Meal Planner */
+.meal-plan-day {
+    transform-style: preserve-3d;
+    transition: transform 0.4s ease;
+}
+
+.meal-plan-day:hover {
+    transform: translateZ(var(--depth-1));
+}
+
+.meal-item {
+    transform: translateZ(0);
+    transition: all 0.3s ease;
+}
+
+.meal-item:hover {
+    transform: translateX(var(--depth-1)) translateZ(var(--depth-1));
+}
+
+/* Nutrition Calculator */
+.nutrition-card {
+    transform-style: preserve-3d;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nutrition-card:hover {
+    transform: translateY(calc(var(--depth-1) * -1)) rotateX(var(--rotate-sm));
+}
+
+.nutrition-chart {
+    transform: translateZ(0);
+    transition: transform 0.6s ease;
+}
+
+.nutrition-chart:hover {
+    transform: translateZ(var(--depth-2)) scale(1.02);
+}
+
+/* AI Chat Interface */
+.chat-message {
+    transform-style: preserve-3d;
+    transition: all 0.3s ease;
+}
+
+.chat-message:hover {
+    transform: translateZ(var(--depth-1));
+}
+
+.user-message {
+    transform-origin: right center;
+}
+
+.bot-message {
+    transform-origin: left center;
+}
+
+/* Form Elements */
+.form-group-3d {
+    transform-style: preserve-3d;
+    margin-bottom: 1.5rem;
+}
+
+.form-group-3d label {
+    transform: translateZ(var(--depth-1));
+    transition: transform 0.3s ease;
+}
+
+.form-group-3d .form-control:focus + label {
+    transform: translateZ(var(--depth-2));
+    color: var(--primary-color);
+}

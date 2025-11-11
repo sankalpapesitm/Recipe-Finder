@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row animate__animated animate__fadeInUp">
+    <!-- Filters Sidebar -->
+    <div class="col-md-3">
+        <div class="card mb-4 shadow-lg animate__animated animate__fadeInLeft">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('search') }}">
+                    <div class="mb-3">
+                        <label for="q" class="form-label fw-bold">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-gradient-primary text-white border-0">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="q" name="q" value="{{ query }}" placeholder="Search recipes...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category" class="form-label fw-bold">Category</label>
+                        <select class="form-select shadow-sm" id="category" name="category">
+                            <option value="">All Categories</option>
+                            <option value="Main Course">Main Course</option>
+                            <option value="Dessert">Dessert</option>
+                            <option value="Appetizer">Appetizer</option>
+                            <option value="Salad">Salad</option>
+                            <option value="Soup">Soup</option>
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Snack">Snack</option>
+                            <option value="Beverage">Beverage</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cooking_time" class="form-label fw-bold">Max Cooking Time (min)</label>
+                        <select class="form-select shadow-sm" id="cooking_time" name="cooking_time">
+                            <option value="">Any Time</option>
+                            <option value="15">15 minutes or less</option>
+                            <option value="30">30 minutes or less</option>
+                            <option value="45">45 minutes or less</option>
+                            <option value="60">60 minutes or less</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label fw-bold">Difficulty</label>
+                        <select class="form-select shadow-sm" id="difficulty" name="difficulty">
+                            <option value="">Any Difficulty</option>
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary shadow">
+                            <i class="fas fa-check me-2"></i>Apply Filters
+                        </button>
+                        <a href="{{ url_for('search') }}" class="btn btn-outline-secondary shadow">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-lg animate__animated animate__fadeInLeft animate__delay-1s">
+            <div class="card-header bg-gradient-info text-white">
+                <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Search Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li><i class="fas fa-dot-circle text-primary me-2"></i>Use specific ingredients (e.g., "chicken", "pasta")</li>
+                    <li><i class="fas fa-dot-circle text-primary me-2"></i>Try cuisine types (e.g., "Italian", "Mexican")</li>
+                    <li><i class="fas fa-dot-circle text-primary me-2"></i>Search by dish name (e.g., "lasagna", "brownies")</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInRight">
+            <h2 class="fw-bold"><i class="fas fa-search me-2 text-primary"></i>Recipe Search Results</h2>
+            <span class="badge bg-gradient-primary text-white fs-6 shadow">{{ recipes|length }} recipes found</span>
+        </div>
+
+        {% if query %}
+        <div class="alert alert-info shadow-sm animate__animated animate__fadeInUp">
+            <i class="fas fa-info-circle me-2"></i>Showing results for: <strong>"{{ query }}"</strong>
+        </div>
+        {% endif %}
+
+        {% if recipes %}
+        <div class="row g-4">
+            {% for recipe in recipes %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 recipe-card shadow-lg animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                    {% if recipe.image_url %}
+                    <div class="card-img-top image-placeholder bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 200px; border-radius: 15px 15px 0 0;" data-src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" data-alt="{{ recipe.title }}">
+                        <i class="fas fa-utensils fa-3x text-white"></i>
+                    </div>
+                    {% else %}
+                    <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 200px; border-radius: 15px 15px 0 0;">
+                        <i class="fas fa-utensils fa-3x text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">{{ recipe.title }}</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-gradient-primary text-white">{{ recipe.difficulty }}</span>
+                            <span class="text-muted"><i class="fas fa-clock me-1"></i> {{ recipe.cooking_time }} min</span>
+                        </div>
+                        <p class="card-text text-muted small">{{ recipe.ingredients[:80] }}...</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-primary">
+                                <i class="fas fa-eye me-1"></i>View Recipe
+                            </a>
+                            {% if session.user_id and not session.is_admin %}
+                            <button class="btn btn-outline-danger" id="favorite-btn-{{ recipe.id }}" onclick="toggleFavorite({{ recipe.id }})">
+                                <i class="far fa-heart"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 animate__animated animate__fadeInUp">
+            <div class="bg-gradient-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 100px; height: 100px;">
+                <i class="fas fa-search fa-2x text-white"></i>
+            </div>
+            <h4 class="text-muted fw-bold">No recipes found</h4>
+            <p class="text-muted">Try adjusting your search criteria or browse all recipes.</p>
+            <a href="{{ url_for('search') }}" class="btn btn-primary shadow">
+                <i class="fas fa-utensils me-2"></i>Browse All Recipes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set selected filters
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Set search query
+        const searchQuery = urlParams.get('q');
+        if (searchQuery) {
+            document.getElementById('q').value = searchQuery;
+        }
+
+        // Set category filter
+        const category = urlParams.get('category');
+        if (category) {
+            document.getElementById('category').value = category;
+        }
+
+        // Set cooking time filter
+        const cookingTime = urlParams.get('cooking_time');
+        if (cookingTime) {
+            document.getElementById('cooking_time').value = cookingTime;
+        }
+
+        // Set difficulty filter
+        const difficulty = urlParams.get('difficulty');
+        if (difficulty) {
+            document.getElementById('difficulty').value = difficulty;
+        }
+
+        // Check favorite status for each recipe
+        {% if session.user_id %}
+        {% for recipe in recipes %}
+        checkFavoriteStatus({{ recipe.id }});
+        {% endfor %}
+        {% endif %}
+
+        // Optimize image loading
+        optimizeImageLoading();
+    });
+
+    // Optimize image loading to prevent hanging
+    function optimizeImageLoading() {
+        const placeholders = document.querySelectorAll('.image-placeholder');
+        const imageLoadTimeout = 3000; // Reduced to 3 seconds for faster response
+
+        placeholders.forEach(placeholder => {
+            const src = placeholder.dataset.src;
+            const alt = placeholder.dataset.alt;
+
+            if (!src) return;
+
+            // Create image element
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = alt;
+            img.className = 'card-img-top';
+            img.style.width = '512px';
+            img.style.height = '200px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '15px 15px 0 0';
+            img.loading = 'lazy';
+
+            // Set timeout for slow loading images
+            const timeoutId = setTimeout(() => {
+                if (!img.complete) {
+                    // Keep placeholder if image takes too long
+                    return;
+                }
+            }, imageLoadTimeout);
+
+            // Handle successful load
+            img.addEventListener('load', function() {
+                clearTimeout(timeoutId);
+                // Replace placeholder with loaded image
+                placeholder.parentNode.replaceChild(img, placeholder);
+            });
+
+            // Handle load error
+            img.addEventListener('error', function() {
+                clearTimeout(timeoutId);
+                // Keep placeholder on error
+                return;
+            });
+
+            // Start loading the image
+            img.src = src;
+        });
+    }
+
+    // Check favorite status for a recipe
+    async function checkFavoriteStatus(recipeId) {
+        try {
+            const response = await fetch(`/check_favorite/${recipeId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.is_favorite) {
+                    const button = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`);
+                    if (button) {
+                        button.classList.remove('btn-outline-primary');
+                        button.classList.add('btn-primary');
+                        button.querySelector('i').classList.replace('far', 'fas');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking favorite status:', error);
+        }
+    }
+
+    // Toggle favorite status for a recipe
+    async function toggleFavorite(recipeId) {
+        try {
+            const response = await fetch(`/toggle_favorite/${recipeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                const button = document.querySelector(`button[onclick="toggleFavorite(${recipeId})"]`);
+                if (button) {
+                    if (data.action === 'added') {
+                        button.classList.remove('btn-outline-primary');
+                        button.classList.add('btn-primary');
+                        button.querySelector('i').classList.replace('far', 'fas');
+                    } else {
+                        button.classList.remove('btn-primary');
+                        button.classList.add('btn-outline-primary');
+                        button.querySelector('i').classList.replace('fas', 'far');
+                    }
+                }
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    }
+</script>
+{% endblock %}

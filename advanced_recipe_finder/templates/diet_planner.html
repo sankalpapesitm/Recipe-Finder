@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Diet Planner{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Create Your Diet Plan</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('diet_planner') }}" id="dietForm">
+                        <div class="mb-3">
+                            <label class="form-label">Select Your Goal Type</label>
+                            <div class="d-flex gap-3 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="goalType" id="goalLoss" value="loss" checked>
+                                    <label class="form-check-label" for="goalLoss">
+                                        Weight Loss
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="goalType" id="goalGain" value="gain">
+                                    <label class="form-check-label" for="goalGain">
+                                        Weight Gain
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="goalAmount" class="form-label">Enter Weight Goal Amount (kg)</label>
+                                <input type="number" class="form-control" id="goalAmount" name="goalAmount"
+                                       placeholder="Enter weight in kg" step="0.1" min="0.1" required>
+                                <div class="form-text">Enter how much weight you want to lose or gain</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="days" class="form-label">Number of Days</label>
+                            <input type="number" class="form-control" id="days" name="days" min="1" max="30" value="7" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="allergies" class="form-label">Allergies (comma-separated)</label>
+                            <input type="text" class="form-control" id="allergies" name="allergies" placeholder="e.g., nuts, milk, gluten">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Generate Diet Plan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dietForm = document.getElementById('dietForm');
+    const goalLoss = document.getElementById('goalLoss');
+    const goalGain = document.getElementById('goalGain');
+
+    // Handle form submission
+    dietForm.addEventListener('submit', function(e) {
+        // Get the goal amount and type
+        const goalAmount = document.getElementById('goalAmount').value;
+        const goalType = goalLoss.checked ? 'loss' : 'gain';
+
+        // Set the goal value (negative for loss, positive for gain)
+        const goalValue = goalType === 'loss' ? -Math.abs(goalAmount) : Math.abs(goalAmount);
+
+        // Create a hidden input to pass the calculated goal value
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'goal';
+        hiddenInput.value = goalValue;
+
+        // Append to form and submit
+        dietForm.appendChild(hiddenInput);
+    });
+});
+</script>
+
+<style>
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}
