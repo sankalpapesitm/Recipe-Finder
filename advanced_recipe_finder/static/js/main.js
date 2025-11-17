@@ -109,6 +109,17 @@ function hideLoading() {
 
 // Show notification toast
 function showToast(message, type = 'info') {
+    // Map type to Bootstrap color classes
+    const typeMap = {
+        'error': 'danger',
+        'success': 'success',
+        'warning': 'warning',
+        'info': 'info',
+        'danger': 'danger'
+    };
+    
+    const bgColor = typeMap[type] || 'info';
+    
     // Create toast container if it doesn't exist
     let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
@@ -120,7 +131,7 @@ function showToast(message, type = 'info') {
     
     // Create toast element
     const toastEl = document.createElement('div');
-    toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+    toastEl.className = `toast align-items-center text-white bg-${bgColor} border-0`;
     toastEl.setAttribute('role', 'alert');
     toastEl.setAttribute('aria-live', 'assertive');
     toastEl.setAttribute('aria-atomic', 'true');

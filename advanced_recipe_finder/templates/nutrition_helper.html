@@ -31,7 +31,7 @@
                                 <button class="btn btn-light btn-sm me-2" id="saveNutritionBtn">
                                     <i class="fas fa-save"></i> Save Plan
                                 </button>
-                                <button class="btn btn-light btn-sm me-2" onclick="generatePDF('nutritionResults', 'nutrition_analysis.pdf')">
+                                <button class="btn btn-light btn-sm me-2" id="downloadPdfBtn">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                             </div>
@@ -93,7 +93,6 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
 <script>
 {% if analysis %}
 var analysisData = {
@@ -101,8 +100,7 @@ var analysisData = {
     analysis: {{ analysis|safe|tojson }}
 };
 {% endif %}
-</script>
-<script>
+
 // Delete nutrition analysis functionality
 function deleteNutritionAnalysis(analysisId) {
     if (confirm('Are you sure you want to delete this nutrition analysis?')) {
@@ -130,6 +128,71 @@ function deleteNutritionAnalysis(analysisId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // PDF Download button functionality
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', function() {
+            const element = document.getElementById('nutritionResults');
+            if (!element) {
+                alert('No results to download');
+                return;
+            }
+
+            // Show loading state
+            downloadPdfBtn.disabled = true;
+            downloadPdfBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating PDF...';
+
+            // Temporarily constrain width for PDF
+            const originalMaxWidth = element.style.maxWidth;
+            const originalWidth = element.style.width;
+            element.style.maxWidth = '750px';
+            element.style.width = '750px';
+
+            const opt = {
+                margin: [12, 12, 12, 12],
+                filename: 'nutrition_analysis.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 1.5,
+                    useCORS: true,
+                    letterRendering: true,
+                    logging: false,
+                    x: 0,
+                    y: 0,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: 750
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait'
+                },
+                pagebreak: { 
+                    mode: ['avoid-all', 'css', 'legacy'],
+                    avoid: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+                }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore original width
+                element.style.maxWidth = originalMaxWidth;
+                element.style.width = originalWidth;
+                // Reset button
+                downloadPdfBtn.disabled = false;
+                downloadPdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+            }).catch(err => {
+                console.error('PDF generation failed:', err);
+                // Restore original width
+                element.style.maxWidth = originalMaxWidth;
+                element.style.width = originalWidth;
+                alert('Failed to generate PDF. Please try again.');
+                downloadPdfBtn.disabled = false;
+                downloadPdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Download PDF';
+            });
+        });
+    }
+
     // Form submission loader
     const nutritionForm = document.getElementById('nutritionForm');
     if (nutritionForm) {
@@ -202,6 +265,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // Simple print styles
 const style = document.createElement('style');
 style.innerHTML = `
+    #nutritionResults {
+        background: white !important;
+        color: black !important;
+        max-width: 100% !important;
+    }
+    #nutritionResults * {
+        visibility: visible !important;
+        opacity: 1 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
     @media print {
         @page {
             margin: 15mm;
@@ -227,41 +301,147 @@ style.innerHTML = `
             display: none !important;
         }
         .card {
-            border: none !important;
+            border: 1px solid #dee2e6 !important;
             box-shadow: none !important;
+            page-break-inside: avoid;
+            max-width: 100% !important;
+            width: 100% !important;
+            background: white !important;
+            overflow: visible !important;
         }
         .card-header {
-            background-color: #fff !important;
-            color: #000 !important;
-            border-bottom: 2px solid #000;
-            padding: 0 0 10px 0 !important;
-            margin-bottom: 20px !important;
+            background-color: #198754 !important;
+            color: #fff !important;
+            border-bottom: 2px solid #dee2e6 !important;
+            padding: 15px 20px !important;
+            margin-bottom: 0 !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            overflow: visible !important;
+        }
+        .card-header h5 {
+            color: #fff !important;
+            margin: 0 !important;
+            font-size: 16px !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+        }
+        .card-body {
+            padding: 20px !important;
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            background: white !important;
+            overflow: visible !important;
         }
         .card-title {
             margin: 0 0 10px 0 !important;
-            font-size: 18px !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            color: #000 !important;
         }
         .text-muted {
-            margin-bottom: 20px !important;
+            margin-bottom: 15px !important;
+            color: #6c757d !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            font-size: 13px !important;
+        }
+        hr {
+            margin: 15px 0 !important;
+            border-top: 1px solid #dee2e6 !important;
+            page-break-after: avoid !important;
         }
         .analysis-content {
-            margin-top: 20px !important;
+            margin-top: 15px !important;
+            line-height: 1.5 !important;
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            color: #000 !important;
+            overflow: visible !important;
+        }
+        .analysis-content * {
+            max-width: 100% !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+            color: #000 !important;
+            box-sizing: border-box !important;
         }
         .analysis-content h1, 
         .analysis-content h2, 
-        .analysis-content h3 {
-            margin: 20px 0 10px 0 !important;
-            font-size: 18px !important;
+        .analysis-content h3,
+        .analysis-content h4,
+        .analysis-content h5,
+        .analysis-content h6 {
+            margin: 12px 0 6px 0 !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            page-break-after: avoid !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            color: #000 !important;
+        }
+        .analysis-content h1 {
+            font-size: 16px !important;
+            margin: 14px 0 8px 0 !important;
+        }
+        .analysis-content h2 {
+            font-size: 15px !important;
+            margin: 13px 0 7px 0 !important;
         }
         .analysis-content p {
-            margin-bottom: 10px !important;
+            margin-bottom: 8px !important;
+            margin-top: 0 !important;
+            line-height: 1.4 !important;
         }
-        .analysis-content ul {
-            margin: 10px 0 10px 20px !important;
+        .analysis-content ul,
+        .analysis-content ol {
+            margin: 8px 0 8px 20px !important;
+            padding-left: 15px !important;
+        }
+        .analysis-content li {
+            margin-bottom: 4px !important;
+            line-height: 1.4 !important;
+        }
+        .analysis-content blockquote {
+            margin: 10px 0 !important;
+            padding: 8px 12px !important;
+            border-left: 3px solid #198754 !important;
+            background-color: #f8f9fa !important;
+        }
+        .analysis-content table {
+            width: 100% !important;
+            margin: 10px 0 !important;
+            border-collapse: collapse !important;
+        }
+        .analysis-content table th,
+        .analysis-content table td {
+            padding: 8px !important;
+            border: 1px solid #dee2e6 !important;
+        }
+        .analysis-content strong,
+        .analysis-content b {
+            font-weight: bold !important;
         }
         hr {
             margin: 20px 0 !important;
-            border-color: #eee;
+            border-color: #dee2e6 !important;
+            page-break-after: avoid !important;
+        }
+        /* Prevent orphaned content */
+        p, li, blockquote {
+            page-break-inside: avoid !important;
         }
     }
 `;

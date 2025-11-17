@@ -3,6 +3,16 @@
 {% block title %}{{ recipe.title }}{% endblock %}
 
 {% block content %}
+<style>
+    .list-group-item {
+        white-space: normal !important;
+        word-break: keep-all;
+    }
+    .ingredients-list .list-group-item {
+        display: flex;
+        align-items: center;
+    }
+</style>
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
@@ -10,10 +20,16 @@
                 <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) if recipe.image_url else url_for('static', filename='hero-image.png') }}" class="d-block mx-auto rounded" alt="{{ recipe.title }}" loading="lazy" style="width: 512px; height: 512px; object-fit: cover;">
                 <div class="card-body">
                     <h1 class="card-title">{{ recipe.title }}</h1>
-                    <p class="text-muted">{{ recipe.category }} | {{ recipe.cooking_time }} minutes | {{ recipe.difficulty }}</p>
+                    
+                    <div class="d-flex justify-content-around text-center mb-4 p-3 bg-light rounded">
+                        <span><i class="fas fa-clock me-1"></i> {{ recipe.cooking_time }} minutes</span>
+                        <span><i class="fas fa-tachometer-alt me-1"></i> {{ recipe.difficulty }}</span>
+                        <span><i class="fas fa-utensils me-1"></i> {{ recipe.category }}</span>
+                    </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
+                            <button id="read-recipe-btn" class="btn btn-primary me-2"><i class="fas fa-volume-up"></i> Read Recipe</button>
                             {% if is_favorite %}
                             <button class="btn btn-danger" onclick="toggleFavorite({{ recipe.id }})"><i class="fas fa-heart"></i> Remove from Favorites</button>
                             {% else %}
@@ -32,37 +48,60 @@
                         </div>
                     </div>
 
-
-
-                    <h5>Ingredients</h5>
-                    <ul class="list-group mb-3">
-                        {% for ingredient in recipe.ingredients %}
-                        <li class="list-group-item">{{ ingredient }}</li>
-                        {% endfor %}
-                    </ul>
-
-                    <h5>Instructions</h5>
-                    <ol class="list-group list-group-numbered mb-3">
-                        {% for instruction in recipe.instructions %}
-                        <li class="list-group-item">{{ instruction }}</li>
-                        {% endfor %}
-                    </ol>
+                    <!-- Ingredients and Instructions Side by Side -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h5>Ingredients</h5>
+                            <ul class="list-group mb-3 ingredients-list">
+                                {% for ingredient in recipe.ingredients %}
+                                <li class="list-group-item">{{ ingredient|replace('\n', ' ')|replace('<br>', ' ')|replace('<br/>', ' ') }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Instructions</h5>
+                            <ol class="list-group list-group-numbered mb-3">
+                                {% for instruction in recipe.instructions %}
+                                <li class="list-group-item">{{ instruction }}</li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                    </div>
 
                     {% if recipe.nutritional_info %}
-                    <h5>Nutritional Information</h5>
-                    <ul class="list-group mb-3">
-                        {% for key, value in recipe.nutritional_info.items() %}
-                        <li class="list-group-item"><strong>{{ key|capitalize }}:</strong> {{ value }}</li>
+                    <h5 class="mt-4 mb-3">Nutritional Information (per serving)</h5>
+                    <div class="text-center mb-3">
+                        {% set nutrition_order = ['servings', 'calories_per_serving', 'calories', 'protein', 'fat', 'carbohydrates'] %}
+                        {% for key in nutrition_order %}
+                            {% if key in recipe.nutritional_info %}
+                                <span style="margin: 0 1.5rem;"><strong style="text-transform: capitalize;">{{ key.replace('_', ' ').replace('calories per serving', 'Calories Per Serving') }}:</strong> {{ recipe.nutritional_info[key] }}</span>
+                            {% endif %}
                         {% endfor %}
-                    </ul>
+                        {% for key, value in recipe.nutritional_info.items() %}
+                            {% if key not in nutrition_order %}
+                                <span style="margin: 0 1.5rem;"><strong style="text-transform: capitalize;">{{ key.replace('_', ' ') }}:</strong> {{ value }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
                     {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Hidden audio player for recipe audio -->
+<audio id="recipeAudioPlayer" style="display: none;"></audio>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    // Recipe data for audio generation
+    const recipeData = {
+        title: {{ recipe.title | tojson }},
+        ingredients: {{ recipe.ingredients | tojson }},
+        instructions: {{ recipe.instructions | tojson }},
+        audio_url: {{ recipe.audio_url | tojson if recipe.audio_url else 'null' }}
+    };
+
     var averageRating = {{ "%.1f"|format(average_rating) if average_rating else "0.0" }};
     let currentRating = {{ user_rating or 0 }};
     let selectedRating = 0;
@@ -296,6 +335,127 @@
             }
         })
         .catch(error => console.error('Error:', error));
+    }
+
+    // Read Recipe button logic
+    const readRecipeBtn = document.getElementById('read-recipe-btn');
+    const audioPlayer = document.getElementById('recipeAudioPlayer');
+    let isReading = false;
+    let speechSynthesis = window.speechSynthesis;
+    
+    if (readRecipeBtn) {
+        readRecipeBtn.addEventListener('click', function() {
+            // If already saved audio exists, play it
+            if (recipeData.audio_url) {
+                if (isReading) {
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+                    readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                    isReading = false;
+                } else {
+                    audioPlayer.src = recipeData.audio_url;
+                    audioPlayer.play();
+                    readRecipeBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Reading';
+                    isReading = true;
+                    
+                    audioPlayer.onended = function() {
+                        readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                        isReading = false;
+                    };
+                }
+                return;
+            }
+            
+            // If no saved audio, use browser TTS
+            if (isReading) {
+                // Stop current reading
+                speechSynthesis.cancel();
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.disabled = false;
+                isReading = false;
+                return;
+            }
+            
+            // Create speech text
+            const speechText = createSpeechText();
+            useBrowserTTS(speechText);
+        });
+        
+        function createSpeechText() {
+            let text = `Recipe: ${recipeData.title}. `;
+            
+            if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+                text += 'Ingredients: ' + recipeData.ingredients.map(ing => expandAbbreviations(ing)).join(', ') + '. ';
+            }
+            
+            if (recipeData.instructions && recipeData.instructions.length > 0) {
+                text += 'Instructions: ';
+                recipeData.instructions.forEach((step, index) => {
+                    text += `Step ${index + 1}: ${expandAbbreviations(step)}. `;
+                });
+            }
+            
+            return text;
+        }
+        
+        function expandAbbreviations(text) {
+            // Expand common cooking measurement abbreviations
+            // Handle patterns like "200g" -> "200 grams"
+            text = text.replace(/(\d+)\s*g\b/gi, '$1 grams');
+            text = text.replace(/(\d+)\s*kg\b/gi, '$1 kilograms');
+            text = text.replace(/(\d+)\s*mg\b/gi, '$1 milligrams');
+            text = text.replace(/(\d+)\s*oz\b/gi, '$1 ounces');
+            text = text.replace(/(\d+)\s*lbs?\b/gi, '$1 pounds');
+            text = text.replace(/(\d+)\s*ml\b/gi, '$1 milliliters');
+            text = text.replace(/(\d+)\s*l\b/gi, '$1 liters');
+            text = text.replace(/(\d+)\s*tsp\b/gi, '$1 teaspoon');
+            text = text.replace(/(\d+)\s*tbsp\b/gi, '$1 tablespoon');
+            text = text.replace(/(\d+)\s*mins?\b/gi, '$1 minutes');
+            text = text.replace(/(\d+)\s*hrs?\b/gi, '$1 hours');
+            text = text.replace(/(\d+)\s*secs?\b/gi, '$1 seconds');
+            
+            // Handle standalone abbreviations (without numbers)
+            text = text.replace(/\btsp\b/gi, 'teaspoon');
+            text = text.replace(/\btbsp\b/gi, 'tablespoon');
+            text = text.replace(/\bcups?\b/gi, 'cup');
+            text = text.replace(/\bpt\b/gi, 'pint');
+            text = text.replace(/\bqt\b/gi, 'quart');
+            text = text.replace(/\bgal\b/gi, 'gallon');
+            
+            // Temperature
+            text = text.replace(/(\d+)\s*°?\s*F\b/gi, '$1 degrees Fahrenheit');
+            text = text.replace(/(\d+)\s*°?\s*C\b/gi, '$1 degrees Celsius');
+            
+            return text;
+        }
+        
+        function useBrowserTTS(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            utterance.onstart = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Reading';
+                readRecipeBtn.disabled = false;
+                isReading = true;
+            };
+            
+            utterance.onend = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                isReading = false;
+            };
+            
+            utterance.onerror = function(event) {
+                console.error('Speech synthesis error:', event);
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.disabled = false;
+                isReading = false;
+                alert('Sorry, text-to-speech is not available on your device.');
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
     }
 </script>
 {% endblock %}

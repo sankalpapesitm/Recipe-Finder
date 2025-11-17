@@ -10,13 +10,20 @@
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ generated_recipe.recipe_data.title }}</h5>
                     <div>
+                        <button id="read-recipe-btn" class="btn btn-light btn-sm me-2"><i class="fas fa-volume-up"></i> Read Recipe</button>
+                        {% if not generated_recipe.is_saved %}
                         <button id="save-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-save"></i> Save</button>
+                        {% else %}
+                        <span class="badge bg-light text-success"><i class="fas fa-check-circle me-1"></i>Already Saved</span>
+                        {% endif %}
                         <button id="download-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-download"></i> Download</button>
                     </div>
                 </div>
                 <div class="card-body">
                     {% if generated_recipe.recipe_data.image_url %}
-                    <img src="{{ generated_recipe.recipe_data.image_url if generated_recipe.recipe_data.image_url.startswith('http') else url_for('uploaded_file', filename=generated_recipe.recipe_data.image_url) }}" class="img-fluid rounded mb-4" alt="{{ generated_recipe.recipe_data.title }}" loading="lazy">
+                    <div class="text-center mb-4">
+                        <img src="{% if generated_recipe.recipe_data.image_url.startswith('http') or generated_recipe.recipe_data.image_url.startswith('/') %}{{ generated_recipe.recipe_data.image_url }}{% else %}{{ url_for('uploaded_file', filename=generated_recipe.recipe_data.image_url) }}{% endif %}" class="rounded" alt="{{ generated_recipe.recipe_data.title }}" loading="lazy" style="width: 512px; height: 512px; object-fit: cover;">
+                    </div>
                     {% else %}
                     <div id="image-generation-section" class="text-center mb-4">
                         <div id="image-placeholder" class="bg-light rounded" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
@@ -33,24 +40,25 @@
 
                     <p class="text-center text-muted mb-4">{{ generated_recipe.recipe_data.description or '' }}</p>
 
-                    <div class="d-flex justify-content-around text-center mb-4 p-2 bg-light rounded">
+                    <div class="d-flex justify-content-around text-center mb-4 p-3 bg-light rounded">
                         <span><i class="fas fa-clock me-1"></i> {{ generated_recipe.recipe_data.cooking_time }}</span>
                         <span><i class="fas fa-tachometer-alt me-1"></i> {{ generated_recipe.recipe_data.difficulty }}</span>
                         <span><i class="fas fa-tag me-1"></i> {{ generated_recipe.recipe_data.category }}</span>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-5">
+                    <!-- Ingredients and Instructions Side by Side -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
                             <h5>Ingredients</h5>
-                            <ul class="list-group list-group-flush mb-3">
+                            <ul class="list-group mb-3">
                                 {% for ingredient in generated_recipe.recipe_data.ingredients %}
                                 <li class="list-group-item">{{ ingredient }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
-                        <div class="col-md-7">
+                        <div class="col-md-6">
                             <h5>Instructions</h5>
-                            <ol class="list-group list-group-numbered">
+                            <ol class="list-group list-group-numbered mb-3">
                                 {% for step in generated_recipe.recipe_data.instructions %}
                                 <li class="list-group-item">{{ step }}</li>
                                 {% endfor %}
@@ -59,15 +67,23 @@
                     </div>
 
                     {% if generated_recipe.recipe_data.nutritional_info %}
-                    <div class="mt-4">
-                        <h5>Nutritional Information (per serving)</h5>
-                        <div class="d-flex flex-wrap justify-content-center text-center">
-                            {% for key, value in generated_recipe.recipe_data.nutritional_info.items() %}
-                            <div class="p-2 m-1 bg-light rounded">
-                                <strong class="text-capitalize">{{ key.replace('_', ' ') }}:</strong> {{ value }}
-                            </div>
-                            {% endfor %}
-                        </div>
+                    <h5 class="mt-4 mb-3">Nutritional Information (per serving)</h5>
+                    <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 2rem;">
+                        {% set nutrition_order = ['servings', 'calories_per_serving', 'calories', 'protein', 'fat', 'carbohydrates'] %}
+                        {% for key in nutrition_order %}
+                            {% if key in generated_recipe.recipe_data.nutritional_info %}
+                                <div>
+                                    <strong style="text-transform: capitalize;">{{ key.replace('_', ' ') }}:</strong> <span>{{ generated_recipe.recipe_data.nutritional_info[key] }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% for key, value in generated_recipe.recipe_data.nutritional_info.items() %}
+                            {% if key not in nutrition_order %}
+                                <div>
+                                    <strong style="text-transform: capitalize;">{{ key.replace('_', ' ') }}:</strong> <span>{{ value }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                     {% endif %}
                 </div>
@@ -90,6 +106,76 @@
 const generatedRecipe = {{ generated_recipe.recipe_data | tojson }};
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Read Recipe button logic
+    const readRecipeBtn = document.getElementById('read-recipe-btn');
+    let isReading = false;
+    let speechSynthesis = window.speechSynthesis;
+    
+    if (readRecipeBtn && generatedRecipe && generatedRecipe.title) {
+        readRecipeBtn.addEventListener('click', function() {
+            if (isReading) {
+                // Stop current reading
+                speechSynthesis.cancel();
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+                return;
+            }
+            
+            // Create speech text
+            let text = `Recipe: ${generatedRecipe.title}. `;
+            
+            // Check for description field (could be 'description' or 'dish_description')
+            const description = generatedRecipe.description || generatedRecipe.dish_description;
+            console.log('Description found:', description);
+            if (description) {
+                text += `${description}. `;
+            }
+            
+            if (generatedRecipe.ingredients && generatedRecipe.ingredients.length > 0) {
+                text += 'Ingredients: ' + generatedRecipe.ingredients.join(', ') + '. ';
+            }
+            
+            if (generatedRecipe.instructions && generatedRecipe.instructions.length > 0) {
+                text += 'Instructions: ';
+                generatedRecipe.instructions.forEach((step, index) => {
+                    text += `Step ${index + 1}: ${step}. `;
+                });
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            utterance.onstart = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Reading';
+                readRecipeBtn.classList.remove('btn-light');
+                readRecipeBtn.classList.add('btn-danger');
+                isReading = true;
+            };
+            
+            utterance.onend = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+            };
+            
+            utterance.onerror = function(event) {
+                console.error('Speech synthesis error:', event);
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+                alert('Sorry, text-to-speech is not available on your device.');
+            };
+            
+            speechSynthesis.speak(utterance);
+        });
+    }
+
     // Download Recipe button logic
     const downloadBtn = document.getElementById('download-recipe-btn');
     if (downloadBtn) {
@@ -106,12 +192,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const recipeDataInput = document.getElementById('recipeDataInput');
             recipeDataInput.value = JSON.stringify(generatedRecipe);
 
-            const formData = new FormData(document.getElementById('saveRecipeForm'));
-
-            if (!document.getElementById('imageUrlInput').value) {
-                alert('Please generate an image before saving.');
-                return;
+            // Set image URL if it exists in generatedRecipe
+            const imageUrlInput = document.getElementById('imageUrlInput');
+            const imagePromptInput = document.getElementById('imagePromptInput');
+            if (generatedRecipe.image_url) {
+                imageUrlInput.value = generatedRecipe.image_url;
+                imagePromptInput.value = generatedRecipe.image_prompt || '';
             }
+
+            const formData = new FormData(document.getElementById('saveRecipeForm'));
 
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
@@ -173,8 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(updateResponse => updateResponse.json())
                     .then(updateData => {
                         if (updateData.status === 'success') {
-                            // Replace the placeholder with the image
-                            imagePlaceholder.innerHTML = `<img src="${data.image_url}" class="img-fluid rounded mb-4" alt="${generatedRecipe.title}" loading="lazy">`;
+                            // Replace the placeholder with the image (centered and fixed size)
+                            imagePlaceholder.innerHTML = `<img src="${data.image_url}" class="rounded" alt="${generatedRecipe.title}" loading="lazy" style="width: 512px; height: 512px; object-fit: cover;">`;
                             // Set hidden form inputs for saving
                             document.getElementById('imageUrlInput').value = data.image_url;
                             document.getElementById('imagePromptInput').value = data.image_prompt;
@@ -202,6 +291,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Video generation feature temporarily disabled
 });
 
 // Simple print styles

@@ -123,7 +123,7 @@
         background-color: var(--bg-color);
         border: 1px solid var(--border-color);
         color: var(--text-color);
-        border-radius: 1rem 0 0 1rem;
+        border-radius: 0;
         padding: 0.75rem 1rem;
         font-size: 0.95rem;
     }
@@ -142,6 +142,46 @@
     .chat-input .btn-primary {
         border-radius: 0 1rem 1rem 0;
         padding: 0.75rem 1.25rem;
+    }
+
+    .chat-input .btn-outline-secondary {
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 0.75rem 1rem;
+    }
+
+    [data-theme="dark"] .chat-input .btn-outline-secondary {
+        border-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+
+    [data-theme="dark"] .chat-input .btn-outline-secondary:hover {
+        background-color: var(--dark-surface);
+        border-color: var(--neon-primary);
+        color: var(--neon-primary);
+    }
+
+    #voiceBtn {
+        border-radius: 1rem 0 0 1rem;
+    }
+
+    #voiceBtn.recording {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    #speakBtn.speaking {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        animation: pulse 1.5s infinite;
     }
     
     .typing-indicator {
@@ -262,6 +302,9 @@
                 <div class="chat-input">
                     <form id="chatForm">
                         <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" id="voiceBtn" title="Voice input">
+                                <i class="fas fa-microphone"></i>
+                            </button>
                             <textarea 
                                 id="chatInput" 
                                 class="form-control" 
@@ -269,6 +312,9 @@
                                 rows="1"
                                 style="resize: none;"
                             ></textarea>
+                            <button class="btn btn-outline-secondary" type="button" id="speakBtn" title="Read last response">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
                             <button class="btn btn-primary" type="submit">
                                 <i class="fas fa-paper-plane"></i>
                             </button>

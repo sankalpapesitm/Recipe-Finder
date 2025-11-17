@@ -1,1 +1,1 @@
- # type: ignore
+recipefinder101

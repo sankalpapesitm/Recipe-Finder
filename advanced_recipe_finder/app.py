@@ -24,8 +24,12 @@ import base64
 import time
 import threading
 import random
-from fpdf import FPDF
+import tempfile
+import shutil
+from fpdf import FPDF 
 from functools import wraps
+from bytez_image_generator import BytezImageGenerator
+from config_backup import Config as AppConfig
 
 # Authentication decorator
 def login_required(f):
@@ -39,38 +43,27 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Configuration Class
-class Config:
-    # Flask Configuration
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
-    
-    # Database Configuration
-    MYSQL_HOST = os.environ.get('MYSQL_HOST') or 'localhost'
-    MYSQL_USER = os.environ.get('MYSQL_USER') or 'root'
-    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD') or ''
+# Configuration Class (inherits from config.py which has all API keys)
+class Config(AppConfig):
+    # Override database configuration if needed
     MYSQL_DB = os.environ.get('MYSQL_DB') or 'recipefinder101'
-    MYSQL_CURSORCLASS = 'DictCursor'
     
-    # File Upload Configuration
+    # Override upload folder
     UPLOAD_FOLDER = 'upload'
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     
-    # Session Configuration
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    
-    # Gemini API Configuration
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or ''
+    # Gemini API Configuration (Text generation only)
     GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com'
     GEMINI_VERSION = 'v1'
     GEMINI_TEXT_MODEL = 'models/gemini-flash-latest'
-    GEMINI_IMAGE_MODEL = 'models/gemini-2.0-flash-exp'
 
 
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Initialize Bytez Image Generator
+bytez_generator = BytezImageGenerator(api_key=Config.BYTEZ_API_KEY)
 
 # Cache for Gemini API responses
 api_cache = {}
@@ -235,6 +228,18 @@ def init_db():
         if cursor.fetchone()[0] == 0:
             cursor.execute("ALTER TABLE recipes ADD COLUMN image_prompt TEXT")
         
+        # Check if audio_url column exists
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = %s
+            AND table_name = 'recipes'
+            AND column_name = 'audio_url'
+        """, (app.config['MYSQL_DB'],))
+        
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("ALTER TABLE recipes ADD COLUMN audio_url VARCHAR(300)")
+        
         # Create favorites table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS favorites (
@@ -280,10 +285,25 @@ def init_db():
                 user_id INT,
                 prompt TEXT NOT NULL,
                 recipe_data TEXT NOT NULL,
+                saved_recipe_id INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (saved_recipe_id) REFERENCES recipes(id) ON DELETE SET NULL
             )
         ''')
+        
+        # Check if saved_recipe_id column exists in generated_recipes
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = %s
+            AND table_name = 'generated_recipes'
+            AND column_name = 'saved_recipe_id'
+        """, (app.config['MYSQL_DB'],))
+        
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("ALTER TABLE generated_recipes ADD COLUMN saved_recipe_id INT")
+            cursor.execute("ALTER TABLE generated_recipes ADD FOREIGN KEY (saved_recipe_id) REFERENCES recipes(id) ON DELETE SET NULL")
         
         # Create nutrition_analysis table
         cursor.execute('''
@@ -702,6 +722,32 @@ def recipe_detail(recipe_id):
                         recipe['ingredients'] = [i.strip() for i in recipe['ingredients'].split(',') if i.strip()]
                 except (json.JSONDecodeError, TypeError):
                     recipe['ingredients'] = []
+            
+            # Clean up newlines in ingredients and merge short items
+            if recipe.get('ingredients') and isinstance(recipe['ingredients'], list):
+                cleaned = []
+                i = 0
+                while i < len(recipe['ingredients']):
+                    ing = recipe['ingredients'][i].replace('\n', ' ').replace('\r', '').strip()
+                    # Keep merging with next items if they don't look like a new ingredient
+                    while i + 1 < len(recipe['ingredients']):
+                        next_ing = recipe['ingredients'][i + 1].strip()
+                        # Check if next item looks like a NEW ingredient (starts with digit or has quantity words at start)
+                        looks_like_new = (
+                            next_ing and len(next_ing) > 0 and
+                            (next_ing[0].isdigit() or 
+                             any(next_ing.lower().startswith(q) for q in ['1 ', '2 ', '3 ', '4 ', '5 ', '6 ', '7 ', '8 ', '9 ', '0.', '1/', '2/', '1.5']))
+                        )
+                        if not looks_like_new:
+                            # Continuation - merge it
+                            ing = ing + ' ' + next_ing.replace('\n', ' ').replace('\r', '').strip()
+                            i += 1
+                        else:
+                            break
+                    if ing:
+                        cleaned.append(ing)
+                    i += 1
+                recipe['ingredients'] = cleaned
 
             if recipe.get('instructions') and isinstance(recipe['instructions'], str):
                 try:
@@ -1693,125 +1739,78 @@ def delete_meal_plan(plan_id):
 
 @app.route('/generate_recipe_image', methods=['POST'])
 def generate_recipe_image_endpoint():
+    """
+    Generate recipe image using Bytez AI
+    Accepts JSON with prompt, ingredients, and optional logo
+    """
     try:
         data = request.get_json()
         prompt = data.get("prompt", "")
         ingredients = data.get("ingredients", "")
-        logo_file = data.get("logo_file", None)
+        logo_base64 = data.get("logo_file", None)
 
         if not prompt:
             return jsonify({"error": "Prompt is required"}), 400
-            
-        if not ingredients:
-            ingredients = "no specific ingredients provided"
-
-        # Direct API call to Gemini
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={app.config['GEMINI_API_KEY']}"
         
-        request_body = {
-            'contents': [{
-                'parts': [{
-                    'text': f"""Create a professional food photograph.
-Main Dish: {prompt}
-Made with: {ingredients}
-Required style: Professional food photography with commercial quality lighting, high resolution details, appetizing presentation, styled food plating, natural colors and textures, clean background, and sharp focus on the dish."""
-                }]
-            }],
-            'generationConfig': {
-                'responseModalities': ['Text', 'Image'],
-            }
-        }
+        # Handle logo if provided
+        logo_path = None
+        if logo_base64:
+            try:
+                # Save logo temporarily
+                logo_bytes = base64.b64decode(logo_base64.split(',')[1] if ',' in logo_base64 else logo_base64)
+                temp_dir = tempfile.gettempdir()
+                logo_path = os.path.join(temp_dir, f"logo_{uuid4().hex}.png")
+                with open(logo_path, 'wb') as f:
+                    f.write(logo_bytes)
+            except Exception as e:
+                app.logger.warning(f"Logo processing failed: {e}")
+                logo_path = None
         
-        # Make the API call
-        response = requests.post(
-            url,
-            headers={'Content-Type': 'application/json'},
-            json=request_body,
-            timeout=120
+        # Generate image using Bytez
+        result = bytez_generator.generate_image(
+            description=prompt,
+            ingredients=ingredients,
+            logo_path=logo_path
         )
         
-        app.logger.info("Made API request to Gemini")
+        # Clean up temp logo
+        if logo_path and os.path.exists(logo_path):
+            try:
+                os.remove(logo_path)
+            except:
+                pass
         
-        if response.status_code == 200:
-            json_response = response.json()
+        if result['success']:
+            # Copy image to upload folder
+            temp_image_path = result['image_path']
+            unique_filename = f"{uuid4().hex}.png"
+            final_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             
-            if 'candidates' in json_response and json_response['candidates']:
-                candidate = json_response['candidates'][0]
-                
-                if candidate.get('content') and candidate['content'].get('parts'):
-                    for part in candidate['content']['parts']:
-                        if part.get('inlineData') and part['inlineData'].get('data'):
-                            image_data = part['inlineData']['data']
-                            image_bytes = base64.b64decode(image_data)
-                            
-                            # Process image with PIL if we have a logo
-                            if logo_file:
-                                try:
-                                    image = Image.open(BytesIO(image_bytes)).convert('RGBA')
-
-                                    # Process logo
-                                    logo_bytes = base64.b64decode(logo_file.split(',')[1])
-                                    logo = Image.open(BytesIO(logo_bytes)).convert('RGBA')
-
-                                    # Calculate logo size (15% of image width)
-                                    logo_width = int(image.width * 0.15)
-                                    logo_height = int(logo_width * (logo.height / logo.width))
-
-                                    # Resize logo
-                                    logo = logo.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
-
-                                    # Paste logo with padding
-                                    image.paste(logo, (30, 30), logo)
-
-                                    # Convert back to bytes
-                                    output = BytesIO()
-                                    image.save(output, format='PNG')
-                                    image_bytes = output.getvalue()
-
-                                except Exception as e:
-                                    app.logger.warning(f"Logo overlay failed: {e}")
-
-                            # Resize image to standard size (512x512)
-                            try:
-                                image = Image.open(BytesIO(image_bytes))
-                                image = image.resize((512, 512), Image.Resampling.LANCZOS)
-                                output = BytesIO()
-                                image.save(output, format='PNG')
-                                image_bytes = output.getvalue()
-                            except Exception as e:
-                                app.logger.warning(f"Image resize failed: {e}")
-
-                            # Save final image
-                            unique_filename = f"{uuid4().hex}.png"
-                            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-
-                            with open(filepath, 'wb') as f:
-                                f.write(image_bytes)
-                            
-                            final_image_url = url_for('uploaded_file', filename=unique_filename, _external=True)
-                            
-                            return jsonify({
-                                "success": True,
-                                "image_prompt": f"{prompt} with {ingredients}",
-                                "image_url": final_image_url,
-                                "user": "Gemini 2.0 Flash Exp",
-                                "note": "Image generated by Gemini AI"
-                            })
+            # Copy file
+            import shutil
+            shutil.copy2(temp_image_path, final_path)
             
-            app.logger.error("No valid image in response")
+            # Clean up temp file
+            try:
+                os.remove(temp_image_path)
+            except:
+                pass
+            
+            # Use relative URL for compatibility with port forwarding
+            final_image_url = url_for('uploaded_file', filename=unique_filename)
+            
             return jsonify({
-                "success": False,
-                "error": "Could not generate an image. Please try rephrasing your prompt."
-            }), 404
-            
+                "success": True,
+                "image_prompt": result.get('prompt', prompt),
+                "image_url": final_image_url,
+                "user": "Bytez Photoreal AI",
+                "note": "Image generated by Bytez AI"
+            })
         else:
-            error_data = response.json()
-            error_msg = f"API Error {response.status_code}: {error_data.get('error', {}).get('message', str(error_data))}"
-            app.logger.error(error_msg)
             return jsonify({
                 "success": False,
-                "error": error_msg
-            }), response.status_code
+                "error": result.get('error', 'Image generation failed')
+            }), 500
             
     except Exception as e:
         app.logger.error(f"Error during image generation: {e}")
@@ -1859,16 +1858,63 @@ def ai_recipe_generator():
         try:
             recipe = json.loads(recipe_json)
             
-            # Save the generated recipe for history
+            # Automatically generate image for the recipe
+            recipe_image_url = None
+            recipe_image_prompt = None
+            try:
+                app.logger.info(f"Auto-generating image for recipe: {recipe.get('title', 'Unknown')}")
+                
+                # Generate image using Bytez with optimized ingredients (max 3 for speed)
+                image_result = bytez_generator.generate_image(
+                    description=recipe.get('title', 'delicious food'),
+                    ingredients=', '.join(recipe.get('ingredients', [])[:3]) if isinstance(recipe.get('ingredients'), list) else ''
+                )
+                
+                if image_result['success']:
+                    # Copy image to upload folder (optimized - use move instead of copy when possible)
+                    temp_image_path = image_result['image_path']
+                    unique_filename = f"{uuid4().hex}.png"
+                    final_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                    
+                    # Use move for speed, fallback to copy if on different drives
+                    try:
+                        shutil.move(temp_image_path, final_path)
+                    except:
+                        shutil.copy2(temp_image_path, final_path)
+                        try:
+                            os.remove(temp_image_path)
+                        except:
+                            pass
+                    
+                    # Use relative URL for compatibility with port forwarding
+                    recipe_image_url = url_for('uploaded_file', filename=unique_filename)
+                    recipe_image_prompt = image_result.get('prompt', '')
+                    recipe['image_url'] = recipe_image_url
+                    recipe['image_prompt'] = recipe_image_prompt
+                    
+                    app.logger.info(f"Image generated successfully: {unique_filename}")
+                else:
+                    app.logger.warning(f"Image generation failed: {image_result.get('error', 'Unknown error')}")
+                    
+            except Exception as img_error:
+                app.logger.error(f"Error during auto image generation: {img_error}")
+                # Continue even if image generation fails
+            
+            # Save the generated recipe for history (with image if available)
+            generated_recipe_id = None
             connection = get_db_connection()
             if connection:
                 cursor = connection.cursor()
-                cursor.execute('INSERT INTO generated_recipes (user_id, prompt, recipe_data) VALUES (%s, %s, %s)', (user_id, prompt, recipe_json))
+                # The recipe object already has image_url and image_prompt if they were generated
+                # Always use the current recipe object (which includes image if generated)
+                updated_json = json.dumps(recipe, ensure_ascii=False)
+                cursor.execute('INSERT INTO generated_recipes (user_id, prompt, recipe_data) VALUES (%s, %s, %s)', (user_id, prompt, updated_json))
+                generated_recipe_id = cursor.lastrowid
                 connection.commit()
                 cursor.close()
                 connection.close()
             
-            return render_template('ai_recipe_generator.html', generated_recipe=recipe, form_data=request.form)
+            return render_template('ai_recipe_generator.html', generated_recipe=recipe, generated_recipe_id=generated_recipe_id, form_data=request.form)
         except (json.JSONDecodeError, Error) as e:
             error_message = f"Error processing generated recipe: {str(e)}"
             if isinstance(e, json.JSONDecodeError):
@@ -1884,6 +1930,7 @@ def ai_recipe_generator():
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
+            # Show all generated recipes (both saved and unsaved)
             cursor.execute('SELECT * FROM generated_recipes WHERE user_id = %s ORDER BY created_at DESC LIMIT 5', (user_id,))
             recipe_history = cursor.fetchall()
             for recipe in recipe_history:
@@ -1917,6 +1964,9 @@ def generated_recipe_detail(generated_recipe_id):
                 # Record the view
                 cursor.execute('INSERT INTO recipe_views (user_id, recipe_id) VALUES (%s, %s) ON DUPLICATE KEY UPDATE viewed_at = CURRENT_TIMESTAMP',
                               (user_id, generated_recipe_id))
+                
+                # Check if this recipe has been saved
+                generated_recipe['is_saved'] = generated_recipe.get('saved_recipe_id') is not None
 
             cursor.close()
 
@@ -1949,6 +1999,7 @@ def save_generated_recipe():
     recipe_json = request.form.get('recipe_data')
     image_url_to_save = request.form.get('image_url')
     image_prompt = request.form.get('image_prompt')
+    audio_url_to_save = request.form.get('audio_url')
 
     if not recipe_json:
         return jsonify({'error': 'Recipe data is missing'}), 400
@@ -1977,31 +2028,40 @@ def save_generated_recipe():
         else:
             return jsonify({'error': 'Invalid image file type'}), 400
     elif image_url_to_save:
-        try:
-            response = requests.get(image_url_to_save, stream=True)
-            response.raise_for_status()
+        # Check if it's a relative URL (already in our upload folder)
+        if image_url_to_save.startswith('/uploads/'):
+            # Extract just the filename from the path
+            image_url = image_url_to_save.replace('/uploads/', '')
+        elif image_url_to_save.startswith('http://') or image_url_to_save.startswith('https://'):
+            # It's an absolute URL, download it
+            try:
+                response = requests.get(image_url_to_save, stream=True, timeout=30)
+                response.raise_for_status()
 
-            file_ext = os.path.splitext(urllib.parse.urlparse(image_url_to_save).path)[1]
-            if not file_ext:
-                content_type = response.headers.get('content-type')
-                if content_type == 'image/png':
-                    file_ext = '.png'
-                elif content_type == 'image/jpeg':
-                    file_ext = '.jpg'
-                else:
-                    file_ext = '.jpg'
+                file_ext = os.path.splitext(urllib.parse.urlparse(image_url_to_save).path)[1]
+                if not file_ext:
+                    content_type = response.headers.get('content-type')
+                    if content_type == 'image/png':
+                        file_ext = '.png'
+                    elif content_type == 'image/jpeg':
+                        file_ext = '.jpg'
+                    else:
+                        file_ext = '.jpg'
 
-            unique_filename = f"{uuid4().hex}{file_ext}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                unique_filename = f"{uuid4().hex}{file_ext}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
 
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
 
-            image_url = unique_filename
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Error downloading image from URL: {e}")
-            return jsonify({'error': 'Could not download image from URL'}), 500
+                image_url = unique_filename
+            except requests.exceptions.RequestException as e:
+                app.logger.error(f"Error downloading image from URL: {e}")
+                return jsonify({'error': 'Could not download image from URL'}), 500
+        else:
+            # Assume it's just a filename
+            image_url = image_url_to_save
 
     # Image is optional for saving generated recipes
     if not image_url:
@@ -2016,8 +2076,8 @@ def save_generated_recipe():
 
             cursor = connection.cursor()
             cursor.execute("""
-                INSERT INTO recipes (title, ingredients, instructions, cooking_time, difficulty, category, image_url, image_prompt, nutritional_info, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO recipes (title, ingredients, instructions, cooking_time, difficulty, category, image_url, image_prompt, audio_url, nutritional_info, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 recipe_data.get('title'),
                 ingredients,
@@ -2027,10 +2087,20 @@ def save_generated_recipe():
                 recipe_data.get('category'),
                 image_url,
                 image_prompt,
+                audio_url_to_save,
                 nutritional_info,
                 session['user_id']
             ))
             new_recipe_id = cursor.lastrowid
+            
+            # Update the generated_recipe to mark it as saved (if it came from generated_recipes)
+            generated_recipe_id = request.form.get('generated_recipe_id')
+            if generated_recipe_id:
+                cursor.execute(
+                    "UPDATE generated_recipes SET saved_recipe_id = %s WHERE id = %s AND user_id = %s",
+                    (new_recipe_id, generated_recipe_id, session['user_id'])
+                )
+            
             connection.commit()
             cursor.close()
             connection.close()
@@ -2093,6 +2163,125 @@ def update_generated_recipe_image(generated_recipe_id):
             return jsonify({'error': 'Invalid recipe data format'}), 500
 
     return jsonify({'error': 'Database connection failed'}), 500
+
+@app.route('/generate_recipe_audio', methods=['POST'])
+def generate_recipe_audio():
+    """
+    Generate text-to-speech audio for a recipe using Gemini API
+    Accepts JSON with recipe title, ingredients, and instructions
+    """
+    try:
+        data = request.get_json()
+        title = data.get('title', '')
+        ingredients = data.get('ingredients', [])
+        instructions = data.get('instructions', [])
+        generated_recipe_id = data.get('generated_recipe_id')
+        
+        if not title:
+            return jsonify({'error': 'Recipe title is required'}), 400
+        
+        # Create text content for speech
+        speech_text = f"Recipe: {title}. "
+        
+        if ingredients:
+            speech_text += "Ingredients: "
+            if isinstance(ingredients, list):
+                speech_text += ", ".join(ingredients) + ". "
+            else:
+                speech_text += str(ingredients) + ". "
+        
+        if instructions:
+            speech_text += "Instructions: "
+            if isinstance(instructions, list):
+                for i, step in enumerate(instructions, 1):
+                    speech_text += f"Step {i}: {step}. "
+            else:
+                speech_text += str(instructions) + ". "
+        
+        # Generate audio using Google Text-to-Speech API
+        try:
+            from google.cloud import texttospeech
+            
+            # Initialize the client
+            client = texttospeech.TextToSpeechClient()
+            
+            # Set the text input
+            synthesis_input = texttospeech.SynthesisInput(text=speech_text)
+            
+            # Build the voice request
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US",
+                name="en-US-Neural2-F",
+                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+            )
+            
+            # Select the audio file type
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+            
+            # Perform the text-to-speech request
+            response = client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            
+            # Save the audio file
+            unique_filename = f"{uuid4().hex}_recipe_audio.mp3"
+            audio_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            with open(audio_path, 'wb') as out:
+                out.write(response.audio_content)
+            
+            # Use relative URL for compatibility with port forwarding
+            audio_url = url_for('uploaded_file', filename=unique_filename)
+            
+            # Update generated_recipes with audio URL if generated_recipe_id is provided
+            if generated_recipe_id:
+                user_id = session.get('user_id')
+                connection = get_db_connection()
+                if connection:
+                    try:
+                        cursor = connection.cursor(dictionary=True)
+                        cursor.execute('SELECT * FROM generated_recipes WHERE id = %s AND user_id = %s', (generated_recipe_id, user_id))
+                        generated_recipe = cursor.fetchone()
+                        
+                        if generated_recipe:
+                            recipe_data = json.loads(generated_recipe['recipe_data'])
+                            recipe_data['audio_url'] = audio_url
+                            updated_recipe_data = json.dumps(recipe_data, ensure_ascii=False)
+                            
+                            cursor.execute('UPDATE generated_recipes SET recipe_data = %s WHERE id = %s', (updated_recipe_data, generated_recipe_id))
+                            connection.commit()
+                        
+                        cursor.close()
+                        connection.close()
+                    except Exception as db_error:
+                        app.logger.error(f"Error updating generated recipe with audio: {db_error}")
+            
+            return jsonify({
+                'success': True,
+                'audio_url': audio_url,
+                'message': 'Audio generated successfully'
+            })
+            
+        except Exception as tts_error:
+            # Fallback: Use browser's built-in speech synthesis
+            app.logger.warning(f"Google TTS failed: {tts_error}. Using browser TTS fallback.")
+            return jsonify({
+                'success': True,
+                'use_browser_tts': True,
+                'text': speech_text,
+                'message': 'Using browser speech synthesis'
+            })
+            
+    except Exception as e:
+        app.logger.error(f"Error generating recipe audio: {e}")
+        return jsonify({
+            'success': False,
+            'error': f"An error occurred: {str(e)}"
+        }), 500
 
 
 # --- Grocery List Routes ---

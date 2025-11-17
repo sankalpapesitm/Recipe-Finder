@@ -1,7 +1,7 @@
 import google.generativeai as genai
-import os
+from config import Config
 
-genai.configure(api_key=os.environ.get('GEMINI_API_KEY') or '')
+genai.configure(api_key=Config.GEMINI_API_KEY)
 
 for m in genai.list_models():
   if 'generateContent' in m.supported_generation_methods:

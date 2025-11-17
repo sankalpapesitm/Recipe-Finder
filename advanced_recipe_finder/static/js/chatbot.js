@@ -1,10 +1,52 @@
 // Chatbot functionality using Gemini API
 
+// Voice recognition and text-to-speech variables
+let recognition = null;
+let isRecording = false;
+let speechSynthesis = window.speechSynthesis;
+let isSpeaking = false;
+let lastBotResponse = '';
+
+// Initialize speech recognition
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false; // Automatically stops when user stops speaking
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.value = transcript;
+            autoResizeTextarea.call(chatInput);
+        }
+        
+        // Automatically send the message after voice input
+        setTimeout(() => {
+            sendMessage(true); // Pass true to indicate auto-speak
+        }, 300);
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        stopRecording();
+        showToast('Voice recognition error: ' + event.error, 'error');
+    };
+    
+    recognition.onend = function() {
+        stopRecording();
+    };
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const chatForm = document.getElementById('chatForm');
     const chatInput = document.getElementById('chatInput');
     const chatMessages = document.getElementById('chatMessages');
     const clearChatBtn = document.getElementById('clearChatBtn');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const speakBtn = document.getElementById('speakBtn');
     
     if (chatForm) {
         // Load chat history
@@ -19,6 +61,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle clear chat button
         if (clearChatBtn) {
             clearChatBtn.addEventListener('click', clearChatHistory);
+        }
+        
+        // Handle voice input button
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', toggleVoiceRecording);
+        }
+        
+        // Handle speak button
+        if (speakBtn) {
+            speakBtn.addEventListener('click', toggleSpeech);
         }
         
         // Auto-resize textarea and handle enter key
@@ -45,7 +97,7 @@ function autoResizeTextarea() {
 }
 
 // Send message to chatbot
-async function sendMessage() {
+async function sendMessage(autoSpeak = false) {
     const chatInput = document.getElementById('chatInput');
     const chatMessages = document.getElementById('chatMessages');
     const message = chatInput.value.trim();
@@ -81,8 +133,18 @@ async function sendMessage() {
             // Add bot response to chat
             addMessageToChat('bot', data.response);
             
+            // Store last bot response for voice output
+            lastBotResponse = data.response;
+            
             // Scroll to bottom
             scrollChatToBottom();
+            
+            // Automatically speak the response if requested
+            if (autoSpeak) {
+                setTimeout(() => {
+                    speakLastResponse();
+                }, 500);
+            }
         } else {
             throw new Error('Server error');
         }
@@ -269,3 +331,167 @@ function initQuickQuestions() {
 
 // Initialize quick questions
 initQuickQuestions();
+
+// Voice recognition functions
+function toggleVoiceRecording() {
+    if (!recognition) {
+        showToast('Speech recognition is not supported in your browser', 'error');
+        return;
+    }
+    
+    // If bot is currently speaking, stop it and start recording
+    if (isSpeaking) {
+        stopSpeech();
+        // Start recording after a short delay to allow speech to stop
+        setTimeout(() => {
+            startRecording();
+        }, 100);
+        return;
+    }
+    
+    if (isRecording) {
+        // Stop recording manually
+        stopRecording();
+    } else {
+        // Start recording
+        startRecording();
+    }
+}
+
+function startRecording() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    
+    try {
+        recognition.start();
+        isRecording = true;
+        
+        if (voiceBtn) {
+            voiceBtn.classList.add('recording');
+            voiceBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            voiceBtn.title = 'Recording... Will auto-stop and send';
+        }
+        
+        showToast('Listening... Speak now (will auto-stop when you finish)', 'info');
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        showToast('Could not start voice recording', 'error');
+    }
+}
+
+function stopRecording() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    
+    if (recognition && isRecording) {
+        recognition.stop();
+    }
+    
+    isRecording = false;
+    
+    if (voiceBtn) {
+        voiceBtn.classList.remove('recording');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        voiceBtn.title = 'Voice input';
+    }
+}
+
+// Text-to-speech functions
+function toggleSpeech() {
+    if (isSpeaking) {
+        stopSpeech();
+    } else {
+        speakLastResponse();
+    }
+}
+
+function speakLastResponse() {
+    if (!lastBotResponse) {
+        showToast('No response to read', 'info');
+        return;
+    }
+    
+    if (!speechSynthesis) {
+        showToast('Text-to-speech is not supported in your browser', 'error');
+        return;
+    }
+    
+    // Stop any ongoing speech
+    speechSynthesis.cancel();
+    
+    // Clean the text for better speech output
+    let textToSpeak = lastBotResponse
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/\n/g, '. ') // Replace newlines with periods
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+    
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Get available voices and prefer English voices
+    const voices = speechSynthesis.getVoices();
+    const englishVoice = voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+    if (englishVoice) {
+        utterance.voice = englishVoice;
+    }
+    
+    const speakBtn = document.getElementById('speakBtn');
+    
+    utterance.onstart = function() {
+        isSpeaking = true;
+        if (speakBtn) {
+            speakBtn.classList.add('speaking');
+            speakBtn.innerHTML = '<i class="fas fa-stop"></i>';
+        }
+    };
+    
+    utterance.onend = function() {
+        isSpeaking = false;
+        if (speakBtn) {
+            speakBtn.classList.remove('speaking');
+            speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        }
+    };
+    
+    utterance.onerror = function(event) {
+        console.error('Speech synthesis error:', event);
+        isSpeaking = false;
+        if (speakBtn) {
+            speakBtn.classList.remove('speaking');
+            speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        }
+        showToast('Error reading response', 'error');
+    };
+    
+    speechSynthesis.speak(utterance);
+}
+
+function stopSpeech() {
+    if (speechSynthesis) {
+        speechSynthesis.cancel();
+    }
+    
+    isSpeaking = false;
+    const speakBtn = document.getElementById('speakBtn');
+    if (speakBtn) {
+        speakBtn.classList.remove('speaking');
+        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+    }
+}
+
+// Helper function to show toast notifications
+function showToast(message, type = 'info') {
+    // Check if a toast function exists globally
+    if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+    } else {
+        // Fallback to console if no toast function exists
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        
+        // Simple alert fallback for errors
+        if (type === 'error') {
+            alert(message);
+        }
+    }
+}

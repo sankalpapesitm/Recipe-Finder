@@ -4,37 +4,39 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h1 class="display-4 mb-4">AI Recipe Generator</h1>
+    <h1 class="mb-5" style="font-size: 3rem; font-weight: 400;">AI Recipe Generator</h1>
 
     <div class="row">
         <!-- Left Column: Generation Form and Results -->
         <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Create a Recipe with AI</h5>
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px 10px 0 0;">
+                    <h5 class="mb-0"><i class="fas fa-wand-magic-sparkles me-2"></i>Generate a New Recipe</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form method="POST" action="{{ url_for('ai_recipe_generator') }}" id="recipeForm">
-                        <div class="mb-3">
-                            <label for="ingredients" class="form-label">Main Ingredients (comma-separated)</label>
-                            <input type="text" class="form-control" id="ingredients" name="ingredients" placeholder="e.g., chicken, potatoes, carrots" value="{{ form_data.ingredients or '' }}" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label for="ingredients" class="form-label fw-semibold">Main Ingredients</label>
+                                <input type="text" class="form-control form-control-lg" id="ingredients" name="ingredients" placeholder="e.g., Chicken, Tomatoes, Basil" value="{{ form_data.ingredients or '' }}" required style="border-radius: 8px;">
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label for="cuisine" class="form-label fw-semibold">Cuisine Style</label>
+                                <input type="text" class="form-control form-control-lg" id="cuisine" name="cuisine" placeholder="e.g., Italian, Mexican" value="{{ form_data.cuisine or '' }}" style="border-radius: 8px;">
+                            </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="cuisine" class="form-label">Cuisine Style</label>
-                                <input type="text" class="form-control" id="cuisine" name="cuisine" placeholder="e.g., Italian, Mexican" value="{{ form_data.cuisine or '' }}">
+                            <div class="col-md-6 mb-4">
+                                <label for="meal_type" class="form-label fw-semibold">Meal Type</label>
+                                <input type="text" class="form-control form-control-lg" id="meal_type" name="meal_type" placeholder="e.g., Dinner, Lunch" value="{{ form_data.meal_type or '' }}" style="border-radius: 8px;">
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="meal_type" class="form-label">Meal Type</label>
-                                <input type="text" class="form-control" id="meal_type" name="meal_type" placeholder="e.g., Dinner, Lunch" value="{{ form_data.meal_type or '' }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="dietary_restrictions" class="form-label">Dietary Restrictions</label>
-                                <input type="text" class="form-control" id="dietary_restrictions" name="dietary_restrictions" placeholder="e.g., Gluten-free" value="{{ form_data.dietary_restrictions or '' }}">
+                            <div class="col-md-6 mb-4">
+                                <label for="dietary_restrictions" class="form-label fw-semibold">Dietary Restrictions</label>
+                                <input type="text" class="form-control form-control-lg" id="dietary_restrictions" name="dietary_restrictions" placeholder="e.g., Vegetarian, Gluten-free" value="{{ form_data.dietary_restrictions or '' }}" style="border-radius: 8px;">
                             </div>
                         </div>
-                        <button type="submit" id="generateBtn" class="btn btn-primary w-100">
-                            <span id="btn-text"><i class="fas fa-magic me-2"></i>Generate Recipe</span>
+                        <button type="submit" id="generateBtn" class="btn btn-lg w-100 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 25px; padding: 15px; font-weight: 500;">
+                            <span id="btn-text"><i class="fas fa-wand-magic-sparkles me-2"></i>Generate Recipe</span>
                             <span id="btn-loader" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
                         </button>
                     </form>
@@ -43,12 +45,13 @@
 
             {% if generated_recipe %}
             <div id="recipeResults" class="printable-area">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm mb-4">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Your AI-Generated Recipe</h5>
                         <div>
+                            <button id="read-recipe-btn" class="btn btn-light btn-sm me-2"><i class="fas fa-volume-up"></i> Read Recipe</button>
                             <button id="save-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-save"></i> Save</button>
-                            <button class="btn btn-light btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+                            <button id="download-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-download"></i> Download</button>
                         </div>
                     </div>
                     <div class="card-body">
@@ -56,35 +59,39 @@
                         <p class="text-center text-muted mb-4">{{ generated_recipe.description }}</p>
 
                         <div id="image-generation-section" class="text-center mb-4">
-                            <div id="image-placeholder" class="bg-light rounded" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <p class="text-muted">Your generated image will appear here.</p>
-                            </div>
-                            <button id="generate-image-btn" class="btn btn-secondary mt-2">
-                                <i class="fas fa-image me-2"></i>Generate Image
-                            </button>
-                            <div id="image-loader" class="spinner-border text-primary mt-2" role="status" style="display: none;">
-                                <span class="visually-hidden">Loading...</span>
+                            <div id="image-placeholder" class="bg-light rounded" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                                {% if generated_recipe.image_url %}
+                                <img src="{{ generated_recipe.image_url }}" class="img-fluid rounded" alt="{{ generated_recipe.title }}" style="max-height: 400px; object-fit: cover;">
+                                {% else %}
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary mb-2" role="status">
+                                        <span class="visually-hidden">Generating image...</span>
+                                    </div>
+                                    <p class="text-muted">Image was not generated. This might take a moment...</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         
-                        <div class="d-flex justify-content-around text-center mb-4 p-2 bg-light rounded">
+                        <div class="d-flex justify-content-around text-center mb-4 p-3 bg-light rounded">
                             <span><i class="fas fa-clock me-1"></i> {{ generated_recipe.cooking_time }}</span>
                             <span><i class="fas fa-tachometer-alt me-1"></i> {{ generated_recipe.difficulty }}</span>
                             <span><i class="fas fa-tag me-1"></i> {{ generated_recipe.category }}</span>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-5">
+                        <!-- Ingredients and Instructions Side by Side -->
+                        <div class="row g-4">
+                            <div class="col-md-6">
                                 <h5>Ingredients</h5>
-                                <ul class="list-group list-group-flush mb-3">
+                                <ul class="list-group mb-3">
                                     {% for ingredient in generated_recipe.ingredients %}
                                     <li class="list-group-item">{{ ingredient }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
-                            <div class="col-md-7">
+                            <div class="col-md-6">
                                 <h5>Instructions</h5>
-                                <ol class="list-group list-group-numbered">
+                                <ol class="list-group list-group-numbered mb-3">
                                     {% for step in generated_recipe.instructions %}
                                     <li class="list-group-item">{{ step }}</li>
                                     {% endfor %}
@@ -93,15 +100,23 @@
                         </div>
 
                         {% if generated_recipe.nutritional_info %}
-                        <div class="mt-4">
-                            <h5>Nutritional Information (per serving)</h5>
-                            <div class="d-flex flex-wrap justify-content-center text-center">
-                                {% for key, value in generated_recipe.nutritional_info.items() %}
-                                <div class="p-2 m-1 bg-light rounded">
-                                    <strong class="text-capitalize">{{ key.replace('_', ' ') }}:</strong> {{ value }}
-                                </div>
-                                {% endfor %}
-                            </div>
+                        <h5 class="mt-4 mb-3">Nutritional Information (per serving)</h5>
+                        <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 2rem;">
+                            {% set nutrition_order = ['servings', 'calories_per_serving', 'calories', 'protein', 'fat', 'carbohydrates'] %}
+                            {% for key in nutrition_order %}
+                                {% if key in generated_recipe.nutritional_info %}
+                                    <div>
+                                        <strong style="text-transform: capitalize;">{{ key.replace('_', ' ') }}:</strong> <span>{{ generated_recipe.nutritional_info[key] }}</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% for key, value in generated_recipe.nutritional_info.items() %}
+                                {% if key not in nutrition_order %}
+                                    <div>
+                                        <strong style="text-transform: capitalize;">{{ key.replace('_', ' ') }}:</strong> <span>{{ value }}</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
                         </div>
                         {% endif %}
                     </div>
@@ -110,26 +125,44 @@
             {% endif %}
         </div>
 
-        <!-- Right Column: History -->
+        <!-- Right Column: Recently Generated Recipes -->
         <div class="col-lg-4">
             <div class="card shadow-sm">
-                <div class="card-header">
+                <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recently Generated Recipes</h5>
                 </div>
                 <div class="list-group list-group-flush">
                     {% if recipe_history %}
                         {% for recipe in recipe_history %}
                             {% if recipe.recipe_data %}
-                            <a href="{{ url_for('generated_recipe_detail', generated_recipe_id=recipe.id) }}" class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">{{ recipe.recipe_data.title }}</h6>
+                            <a href="{{ url_for('generated_recipe_detail', generated_recipe_id=recipe.id) }}" class="list-group-item list-group-item-action p-2">
+                                <div class="d-flex align-items-center">
+                                    <!-- Recipe Image -->
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if recipe.recipe_data.image_url %}
+                                        <img src="{% if recipe.recipe_data.image_url.startswith('http') or recipe.recipe_data.image_url.startswith('/') %}{{ recipe.recipe_data.image_url }}{% else %}{{ url_for('uploaded_file', filename=recipe.recipe_data.image_url) }}{% endif %}" 
+                                             alt="{{ recipe.recipe_data.title }}" 
+                                             class="rounded" 
+                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                            <i class="fas fa-utensils text-muted fa-2x"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Recipe Info -->
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ recipe.recipe_data.title }}</h6>
+                                        <small class="text-muted">
+                                            <i class="far fa-calendar-alt me-1"></i>{{ recipe.created_at.strftime('%Y-%m-%d') }}
+                                        </small>
+                                    </div>
                                 </div>
-                                <small class="text-muted">Generated on {{ recipe.created_at.strftime('%Y-%m-%d') }}</small>
                             </a>
                             {% endif %}
                         {% endfor %}
                     {% else %}
-                        <div class="list-group-item text-muted">Your generated recipe history is empty.</div>
+                        <div class="list-group-item text-muted text-center">Your generated recipe history is empty.</div>
                     {% endif %}
                 </div>
             </div>
@@ -141,64 +174,103 @@
     <input type="hidden" name="recipe_data" id="recipeDataInput">
     <input type="hidden" name="image_url" id="imageUrlInput">
     <input type="hidden" name="image_prompt" id="imagePromptInput">
+    <input type="hidden" name="generated_recipe_id" id="generatedRecipeIdInput" value="{{ generated_recipe_id if generated_recipe_id else '' }}">
 </form>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/pdf_utils.js') }}"></script>
 <script>
 const generatedRecipe = {{ generated_recipe | default({}) | tojson }};
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Read Recipe button logic
+    const readRecipeBtn = document.getElementById('read-recipe-btn');
+    let isReading = false;
+    let speechSynthesis = window.speechSynthesis;
+    
+    if (readRecipeBtn && generatedRecipe && generatedRecipe.title) {
+        readRecipeBtn.addEventListener('click', function() {
+            if (isReading) {
+                // Stop current reading
+                speechSynthesis.cancel();
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+                return;
+            }
+            
+            // Create speech text
+            let text = `Recipe: ${generatedRecipe.title}. `;
+            
+            // Check for description field (could be 'description' or 'dish_description')
+            const description = generatedRecipe.description || generatedRecipe.dish_description;
+            console.log('Description found:', description);
+            if (description) {
+                text += `${description}. `;
+            }
+            
+            if (generatedRecipe.ingredients && generatedRecipe.ingredients.length > 0) {
+                text += 'Ingredients: ' + generatedRecipe.ingredients.join(', ') + '. ';
+            }
+            
+            if (generatedRecipe.instructions && generatedRecipe.instructions.length > 0) {
+                text += 'Instructions: ';
+                generatedRecipe.instructions.forEach((step, index) => {
+                    text += `Step ${index + 1}: ${step}. `;
+                });
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            utterance.onstart = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Reading';
+                readRecipeBtn.classList.remove('btn-light');
+                readRecipeBtn.classList.add('btn-danger');
+                isReading = true;
+            };
+            
+            utterance.onend = function() {
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+            };
+            
+            utterance.onerror = function(event) {
+                console.error('Speech synthesis error:', event);
+                readRecipeBtn.innerHTML = '<i class="fas fa-volume-up"></i> Read Recipe';
+                readRecipeBtn.classList.remove('btn-danger');
+                readRecipeBtn.classList.add('btn-light');
+                isReading = false;
+                alert('Sorry, text-to-speech is not available on your device.');
+            };
+            
+            speechSynthesis.speak(utterance);
+        });
+    }
+
+    // Download Recipe button logic
+    const downloadBtn = document.getElementById('download-recipe-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            const filename = `${generatedRecipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_recipe.pdf`;
+            generatePDF('recipeResults', filename);
+        });
+    }
+
     // Form submission loader
     const recipeForm = document.getElementById('recipeForm');
     if (recipeForm) {
         recipeForm.addEventListener('submit', function() {
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
-            btn.querySelector('#btn-text').style.display = 'none';
-            btn.querySelector('#btn-loader').style.display = 'inline-block';
-        });
-    }
-
-    const generateImageBtn = document.getElementById('generate-image-btn');
-    const imagePlaceholder = document.getElementById('image-placeholder');
-    const imageLoader = document.getElementById('image-loader');
-    const imageUrlInput = document.getElementById('imageUrlInput');
-    const imagePromptInput = document.getElementById('imagePromptInput');
-
-    if (generateImageBtn) {
-        generateImageBtn.addEventListener('click', function() {
-            generateImageBtn.style.display = 'none';
-            imageLoader.style.display = 'block';
-
-            fetch('{{ url_for("generate_recipe_image_endpoint") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt: generatedRecipe.title, ingredients: generatedRecipe.ingredients.join(', ') })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.image_url) {
-                    imagePlaceholder.innerHTML = `<img src="${data.image_url}" class="img-fluid rounded">`;
-                    imageUrlInput.value = data.image_url;
-                    imagePromptInput.value = data.image_prompt;
-                    // Redirect to the generated recipe detail page
-                    if (generatedRecipe.id) {
-                        window.location.href = '/generated_recipe/' + generatedRecipe.id;
-                    }
-                } else {
-                    imagePlaceholder.innerHTML = `<p class="text-danger">Error generating image: ${data.error}</p>`;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                imagePlaceholder.innerHTML = `<p class="text-danger">An error occurred while generating the image.</p>`;
-            })
-            .finally(() => {
-                imageLoader.style.display = 'none';
-            });
+            btn.querySelector('#btn-text').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating recipe and image...';
         });
     }
 
@@ -207,14 +279,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (saveBtn) {
         saveBtn.addEventListener('click', function() {
             const recipeDataInput = document.getElementById('recipeDataInput');
+            const imageUrlInput = document.getElementById('imageUrlInput');
+            const imagePromptInput = document.getElementById('imagePromptInput');
+            
             recipeDataInput.value = JSON.stringify(generatedRecipe);
 
-            const formData = new FormData(document.getElementById('saveRecipeForm'));
-
-            if (!imageUrlInput.value) {
-                alert('Please generate an image before saving.');
-                return;
+            // Check if image exists in generatedRecipe object
+            if (generatedRecipe.image_url) {
+                imageUrlInput.value = generatedRecipe.image_url;
+                imagePromptInput.value = generatedRecipe.image_prompt || '';
+            } else {
+                // Image was not set in generatedRecipe, try to save anyway
+                imageUrlInput.value = '';
+                imagePromptInput.value = '';
             }
+
+            const formData = new FormData(document.getElementById('saveRecipeForm'));
 
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
@@ -242,30 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Video generation feature temporarily disabled
+    console.log('Recipe generator page loaded');
 });
-
-// Simple print styles
-const style = document.createElement('style');
-style.innerHTML = `
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        .printable-area, .printable-area * {
-            visibility: visible;
-        }
-        .printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        .btn, .card-header a, form, .modal, #image-generation-section {
-            display: none !important;
-        }
-    }
-`;
-document.head.appendChild(style);
-
 </script>
 {% endblock %}
