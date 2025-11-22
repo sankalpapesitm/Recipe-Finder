@@ -466,6 +466,50 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+# Helper function to cleanup temporary files
+def cleanup_temp_files():
+    """Remove temporary image files and database records older than 30 minutes"""
+    try:
+        upload_folder = app.config['UPLOAD_FOLDER']
+        current_time = time.time()
+        thirty_minutes_ago = current_time - 1800  # 30 minutes in seconds
+        
+        # Clean up temporary image files
+        for filename in os.listdir(upload_folder):
+            if filename.startswith('temp_') and filename.endswith('.png'):
+                file_path = os.path.join(upload_folder, filename)
+                if os.path.getctime(file_path) < thirty_minutes_ago:
+                    try:
+                        os.remove(file_path)
+                        app.logger.info(f"Cleaned up temporary file: {filename}")
+                    except Exception as e:
+                        app.logger.error(f"Error removing temp file {filename}: {e}")
+        
+        # Clean up unsaved generated recipes older than 30 minutes
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+                # Delete unsaved generated recipes older than 30 minutes
+                cursor.execute("""
+                    DELETE FROM generated_recipes 
+                    WHERE saved_recipe_id IS NULL 
+                    AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+                """)
+                deleted_count = cursor.rowcount
+                connection.commit()
+                cursor.close()
+                connection.close()
+                if deleted_count > 0:
+                    app.logger.info(f"Cleaned up {deleted_count} old unsaved generated recipes")
+            except Exception as e:
+                app.logger.error(f"Error cleaning up old generated recipes: {e}")
+                if connection:
+                    connection.close()
+                    
+    except Exception as e:
+        app.logger.error(f"Error during temp file cleanup: {e}")
+
 # Helper function to get user info
 def get_user_info(user_id):
     connection = get_db_connection()
@@ -548,6 +592,47 @@ def clean_json_response(response_text):
     
     return None
 
+def normalize_cooking_time(cooking_time):
+    """Normalize cooking_time to integer (minutes) for consistent processing"""
+    if not cooking_time:
+        return None
+        
+    if isinstance(cooking_time, str):
+        import re
+        cooking_time_str = cooking_time.lower().strip()
+        
+        # Look for patterns like "1 hour 30 minutes", "2 hours", "30 minutes", "45 mins"
+        hours_match = re.search(r'(\d+)\s*(?:hours?|hrs?|h)', cooking_time_str)
+        minutes_match = re.search(r'(\d+)\s*(?:minutes?|mins?|m)', cooking_time_str)
+        
+        total_minutes = 0
+        if hours_match:
+            total_minutes += int(hours_match.group(1)) * 60
+        if minutes_match:
+            total_minutes += int(minutes_match.group(1))
+        
+        # If no specific time format found, try to extract just the first number
+        if total_minutes == 0:
+            number_match = re.search(r'(\d+)', cooking_time_str)
+            if number_match:
+                total_minutes = int(number_match.group(1))
+        
+        return total_minutes if total_minutes > 0 else None
+    elif not isinstance(cooking_time, int):
+        # Try to convert to int if it's another type
+        try:
+            return int(cooking_time)
+        except (ValueError, TypeError):
+            return None
+    
+    return cooking_time
+
+def normalize_recipes_cooking_time(recipes):
+    """Normalize cooking_time for a list of recipes"""
+    for recipe in recipes:
+        recipe['cooking_time'] = normalize_cooking_time(recipe.get('cooking_time'))
+    return recipes
+
 # Routes
 @app.route('/')
 def index():
@@ -556,6 +641,7 @@ def index():
         cursor = connection.cursor(dictionary=True)
         cursor.execute('SELECT * FROM recipes ORDER BY created_at DESC LIMIT 6')
         featured_recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(featured_recipes)
         cursor.close()
         connection.close()
         return render_template('index.html', featured_recipes=featured_recipes)
@@ -678,6 +764,7 @@ def search():
         
         cursor.execute(sql, params)
         recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(recipes)
         cursor.close()
         connection.close()
         
@@ -756,6 +843,9 @@ def recipe_detail(recipe_id):
                     # Fallback for plain text instructions separated by newlines
                     recipe['instructions'] = [step.strip() for step in recipe['instructions'].split('\n') if step.strip()]
 
+            # Normalize cooking_time to integer (minutes)
+            recipe['cooking_time'] = normalize_cooking_time(recipe.get('cooking_time'))
+
             # Fetch reviews and calculate average rating
             cursor.execute("SELECT rr.*, u.username FROM recipe_reviews rr JOIN users u ON rr.user_id = u.id WHERE rr.recipe_id = %s ORDER BY rr.created_at DESC", (recipe_id,))
             reviews = cursor.fetchall()
@@ -810,18 +900,24 @@ def submit_review(recipe_id):
 
             if existing:
                 # Update existing review
-                if rating and rating > 0:
-                    # Update rating, and comment only if provided
-                    if comment and comment.strip():
-                        cursor.execute("UPDATE recipe_reviews SET rating = %s, comment = %s WHERE recipe_id = %s AND user_id = %s",
-                                       (rating, comment, recipe_id, user_id))
+                if rating is not None:
+                    if rating > 0:
+                        # Update rating, and comment only if provided
+                        if comment and comment.strip():
+                            cursor.execute("UPDATE recipe_reviews SET rating = %s, comment = %s WHERE recipe_id = %s AND user_id = %s",
+                                           (rating, comment, recipe_id, user_id))
+                        else:
+                            cursor.execute("UPDATE recipe_reviews SET rating = %s WHERE recipe_id = %s AND user_id = %s",
+                                           (rating, recipe_id, user_id))
                     else:
-                        cursor.execute("UPDATE recipe_reviews SET rating = %s WHERE recipe_id = %s AND user_id = %s",
-                                       (rating, recipe_id, user_id))
+                        # Zero rating - delete the review entirely
+                        cursor.execute("DELETE FROM recipe_reviews WHERE recipe_id = %s AND user_id = %s",
+                                       (recipe_id, user_id))
                 else:
-                    # Update only comment
-                    cursor.execute("UPDATE recipe_reviews SET comment = %s WHERE recipe_id = %s AND user_id = %s",
-                                   (comment, recipe_id, user_id))
+                    # Update only comment (no rating provided)
+                    if comment and comment.strip():
+                        cursor.execute("UPDATE recipe_reviews SET comment = %s WHERE recipe_id = %s AND user_id = %s",
+                                       (comment, recipe_id, user_id))
             else:
                 # New review - require rating
                 if not rating or rating <= 0:
@@ -867,6 +963,7 @@ def user_dashboard():
             LIMIT 5
         ''', (user_id,))
         favorite_recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(favorite_recipes)
 
         cursor.execute('''
             SELECT r.* FROM recipes r
@@ -876,6 +973,7 @@ def user_dashboard():
             LIMIT 5
         ''', (user_id,))
         recent_recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(recent_recipes)
 
         cursor.execute('SELECT COUNT(*) as count FROM recipe_views WHERE user_id = %s AND viewed_at > DATE_SUB(NOW(), INTERVAL 30 DAY)', (user_id,))
         recipes_viewed_count = cursor.fetchone()['count']
@@ -950,6 +1048,7 @@ def user_favorites():
             ORDER BY f.created_at DESC
         ''', (user_id,))
         favorite_recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(favorite_recipes)
         cursor.close()
         connection.close()
         
@@ -1090,6 +1189,7 @@ def manage_recipes():
         # Get recipes for the current page
         cursor.execute('SELECT * FROM recipes ORDER BY created_at DESC LIMIT %s OFFSET %s', (per_page, offset))
         recipes = cursor.fetchall()
+        normalize_recipes_cooking_time(recipes)
         cursor.close()
         connection.close()
 
@@ -1251,17 +1351,33 @@ def manage_users():
         flash('Please log in as an admin to access this page', 'danger')
         return redirect(url_for('login'))
 
+    # Get page number from query parameter, default to 1
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Number of users per page
+    offset = (page - 1) * per_page
+
     connection = get_db_connection()
     if connection:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM users ORDER BY created_at DESC')
+        
+        # Get total count of users
+        cursor.execute('SELECT COUNT(*) as total FROM users')
+        total_users = cursor.fetchone()['total']
+        total_pages = (total_users + per_page - 1) // per_page  # Ceiling division
+        
+        # Get users for current page
+        cursor.execute('SELECT * FROM users ORDER BY created_at DESC LIMIT %s OFFSET %s', (per_page, offset))
         users = cursor.fetchall()
         cursor.close()
         connection.close()
 
-        return render_template('admin/manage_users.html', users=users)
+        return render_template('admin/manage_users.html', 
+                             users=users, 
+                             page=page, 
+                             total_pages=total_pages,
+                             total_users=total_users)
 
-    return render_template('admin/manage_users.html', users=[])
+    return render_template('admin/manage_users.html', users=[], page=1, total_pages=1, total_users=0)
 
 @app.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
 def edit_user(user_id):
@@ -1833,14 +1949,25 @@ def ai_recipe_generator():
         ingredients = request.form.get('ingredients', '')
         cuisine = request.form.get('cuisine', '')
         meal_type = request.form.get('meal_type', '')
+        difficulty = request.form.get('difficulty', '')
         dietary_restrictions = request.form.get('dietary_restrictions', '')
-        app.logger.info(f"AI recipe generator POST with ingredients: {ingredients}, cuisine: {cuisine}")
+        app.logger.info(f"AI recipe generator POST with ingredients: {ingredients}, cuisine: {cuisine}, difficulty: {difficulty}")
         
         if not ingredients:
             flash('Please enter at least some ingredients', 'danger')
             return redirect(url_for('ai_recipe_generator'))
         
-        prompt = f'Create a recipe with the following requirements: - Main ingredients: {ingredients} - Cuisine style: {cuisine} - Meal type: {meal_type} - Dietary restrictions: {dietary_restrictions}. Provide the recipe in JSON format with these fields: title, description, ingredients (as a list of strings), instructions (as a list of strings), cooking_time (e.g., "30 minutes"), difficulty, category, nutritional_info (as a JSON object). Only return the JSON, no additional text.'
+        # Build prompt with difficulty and cooking time constraints
+        difficulty_text = ''
+        if difficulty:
+            if difficulty == 'Easy':
+                difficulty_text = f' - Difficulty level: {difficulty} (cooking time should be 30 minutes or less)'
+            elif difficulty == 'Medium':
+                difficulty_text = f' - Difficulty level: {difficulty} (cooking time should be between 30 minutes to 1 hour)'
+            elif difficulty == 'Hard':
+                difficulty_text = f' - Difficulty level: {difficulty} (cooking time should be 1 hour or more)'
+        
+        prompt = f'Create a recipe with the following requirements: - Main ingredients: {ingredients} - Cuisine style: {cuisine} - Meal type: {meal_type}{difficulty_text} - Dietary restrictions: {dietary_restrictions}. Provide the recipe in JSON format with these fields: title (create a unique, creative recipe name using the main ingredients provided - avoid generic names, make it specific and distinctive. DO NOT include any time-related words like "20-minute", "quick", "fast", "instant", "speedy", "rapid" in the title), description, ingredients (as a list of strings), instructions (as a list of strings), cooking_time (e.g., "30 minutes"), difficulty (must be exactly "Easy", "Medium", or "Hard"{" and set to " + difficulty if difficulty else ""}), category, nutritional_info (as a JSON object). Only return the JSON, no additional text.'
         
         raw_response = call_gemini_api(prompt)
 
@@ -1858,41 +1985,49 @@ def ai_recipe_generator():
         try:
             recipe = json.loads(recipe_json)
             
+            # Normalize cooking_time to integer (minutes) for consistent processing
+            recipe['cooking_time'] = normalize_cooking_time(recipe.get('cooking_time'))
+            
             # Automatically generate image for the recipe
             recipe_image_url = None
             recipe_image_prompt = None
+            temp_image_path = None
             try:
+                # Clean up old temporary files first (older than 1 hour)
+                cleanup_temp_files()
+                
                 app.logger.info(f"Auto-generating image for recipe: {recipe.get('title', 'Unknown')}")
                 
-                # Generate image using Bytez with optimized ingredients (max 3 for speed)
+                # Generate image using Bytez with optimized description for speed
+                enhanced_description = f"{recipe.get('title', 'food')} - no white rice, fully mixed spiced dish"
+                
                 image_result = bytez_generator.generate_image(
-                    description=recipe.get('title', 'delicious food'),
-                    ingredients=', '.join(recipe.get('ingredients', [])[:3]) if isinstance(recipe.get('ingredients'), list) else ''
+                    description=enhanced_description,
+                    ingredients=""
                 )
                 
                 if image_result['success']:
-                    # Copy image to upload folder (optimized - use move instead of copy when possible)
+                    # Copy to uploads immediately for display, but mark as temporary
                     temp_image_path = image_result['image_path']
-                    unique_filename = f"{uuid4().hex}.png"
+                    unique_filename = f"temp_{uuid4().hex}.png"
                     final_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
                     
-                    # Use move for speed, fallback to copy if on different drives
+                    # Copy the file for immediate display
                     try:
-                        shutil.move(temp_image_path, final_path)
-                    except:
                         shutil.copy2(temp_image_path, final_path)
-                        try:
-                            os.remove(temp_image_path)
-                        except:
-                            pass
+                        # Clean up original temp file
+                        os.remove(temp_image_path)
+                    except Exception as copy_error:
+                        app.logger.error(f"Error copying temp image: {copy_error}")
                     
-                    # Use relative URL for compatibility with port forwarding
+                    # Use relative URL for immediate display
                     recipe_image_url = url_for('uploaded_file', filename=unique_filename)
                     recipe_image_prompt = image_result.get('prompt', '')
                     recipe['image_url'] = recipe_image_url
                     recipe['image_prompt'] = recipe_image_prompt
+                    recipe['temp_filename'] = unique_filename  # Store temp filename for cleanup
                     
-                    app.logger.info(f"Image generated successfully: {unique_filename}")
+                    app.logger.info(f"Image generated and ready for display: {unique_filename}")
                 else:
                     app.logger.warning(f"Image generation failed: {image_result.get('error', 'Unknown error')}")
                     
@@ -1914,7 +2049,30 @@ def ai_recipe_generator():
                 cursor.close()
                 connection.close()
             
-            return render_template('ai_recipe_generator.html', generated_recipe=recipe, generated_recipe_id=generated_recipe_id, form_data=request.form)
+            # Fetch updated recipe history including the newly generated recipe (only unsaved ones)
+            recipe_history = []
+            connection = get_db_connection()
+            if connection:
+                try:
+                    cursor = connection.cursor(dictionary=True)
+                    cursor.execute('SELECT * FROM generated_recipes WHERE user_id = %s AND saved_recipe_id IS NULL ORDER BY created_at DESC LIMIT 5', (user_id,))
+                    recipe_history = cursor.fetchall()
+                    for recipe_item in recipe_history:
+                        try:
+                            recipe_item['recipe_data'] = json.loads(recipe_item['recipe_data'])
+                            
+                            # Normalize cooking_time for recipe history display
+                            recipe_data = recipe_item['recipe_data']
+                            recipe_data['cooking_time'] = normalize_cooking_time(recipe_data.get('cooking_time'))
+                        except (json.JSONDecodeError, TypeError):
+                            recipe_item['recipe_data'] = None
+                    cursor.close()
+                except Error as e:
+                    app.logger.error(f"Database error fetching updated recipe history: {e}")
+                finally:
+                    connection.close()
+            
+            return render_template('ai_recipe_generator.html', generated_recipe=recipe, generated_recipe_id=generated_recipe_id, recipe_history=recipe_history, form_data=request.form)
         except (json.JSONDecodeError, Error) as e:
             error_message = f"Error processing generated recipe: {str(e)}"
             if isinstance(e, json.JSONDecodeError):
@@ -1924,14 +2082,14 @@ def ai_recipe_generator():
             app.logger.error(f"AI Recipe Gen Error: {e}\nResponse was: {recipe_json}")
             return render_template('ai_recipe_generator.html', form_data=request.form)
     
-    # For GET request, show history of generated recipes
+    # For GET request, show history of generated recipes (only unsaved ones)
     connection = get_db_connection()
     recipe_history = []
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-            # Show all generated recipes (both saved and unsaved)
-            cursor.execute('SELECT * FROM generated_recipes WHERE user_id = %s ORDER BY created_at DESC LIMIT 5', (user_id,))
+            # Show only unsaved generated recipes
+            cursor.execute('SELECT * FROM generated_recipes WHERE user_id = %s AND saved_recipe_id IS NULL ORDER BY created_at DESC LIMIT 5', (user_id,))
             recipe_history = cursor.fetchall()
             for recipe in recipe_history:
                 try:
@@ -1973,6 +2131,11 @@ def generated_recipe_detail(generated_recipe_id):
             if generated_recipe:
                 try:
                     generated_recipe['recipe_data'] = json.loads(generated_recipe['recipe_data'])
+                    
+                    # Normalize cooking_time to integer (minutes) for display
+                    recipe_data = generated_recipe['recipe_data']
+                    recipe_data['cooking_time'] = normalize_cooking_time(recipe_data.get('cooking_time'))
+                    
                     return render_template('generated_recipe_detail.html', generated_recipe=generated_recipe)
                 except (json.JSONDecodeError, TypeError):
                     flash('Error decoding recipe data.', 'danger')
@@ -2063,6 +2226,24 @@ def save_generated_recipe():
             # Assume it's just a filename
             image_url = image_url_to_save
 
+    # Handle temporary image from generated recipe
+    temp_filename = recipe_data.get('temp_filename')
+    if temp_filename:
+        temp_image_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+        if os.path.exists(temp_image_path):
+            try:
+                # Rename the temporary file to permanent filename
+                unique_filename = f"{uuid4().hex}.png"
+                final_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                
+                shutil.move(temp_image_path, final_path)
+                image_url = unique_filename
+                app.logger.info(f"Made temporary image permanent: {unique_filename}")
+            except Exception as e:
+                app.logger.error(f"Error making temporary image permanent: {e}")
+                # Keep the temp file as is
+                image_url = temp_filename
+
     # Image is optional for saving generated recipes
     if not image_url:
         image_url = None
@@ -2074,6 +2255,9 @@ def save_generated_recipe():
             instructions = '\n'.join(recipe_data.get('instructions', []))
             nutritional_info = json.dumps(recipe_data.get('nutritional_info', {}), ensure_ascii=False)
 
+            # Normalize cooking_time to integer (minutes)
+            cooking_time = normalize_cooking_time(recipe_data.get('cooking_time'))
+
             cursor = connection.cursor()
             cursor.execute("""
                 INSERT INTO recipes (title, ingredients, instructions, cooking_time, difficulty, category, image_url, image_prompt, audio_url, nutritional_info, created_by)
@@ -2082,7 +2266,7 @@ def save_generated_recipe():
                 recipe_data.get('title'),
                 ingredients,
                 instructions,
-                recipe_data.get('cooking_time'),
+                cooking_time,
                 recipe_data.get('difficulty'),
                 recipe_data.get('category'),
                 image_url,
@@ -2096,10 +2280,21 @@ def save_generated_recipe():
             # Update the generated_recipe to mark it as saved (if it came from generated_recipes)
             generated_recipe_id = request.form.get('generated_recipe_id')
             if generated_recipe_id:
+                # Update the generated_recipes record with saved_recipe_id
                 cursor.execute(
                     "UPDATE generated_recipes SET saved_recipe_id = %s WHERE id = %s AND user_id = %s",
                     (new_recipe_id, generated_recipe_id, session['user_id'])
                 )
+                
+                # Also update the recipe_data in generated_recipes with the new permanent image URL
+                if image_url:
+                    # Update the recipe data to include the permanent image URL
+                    recipe_data['image_url'] = url_for('uploaded_file', filename=image_url)
+                    updated_recipe_json = json.dumps(recipe_data, ensure_ascii=False)
+                    cursor.execute(
+                        "UPDATE generated_recipes SET recipe_data = %s WHERE id = %s AND user_id = %s",
+                        (updated_recipe_json, generated_recipe_id, session['user_id'])
+                    )
             
             connection.commit()
             cursor.close()
@@ -2531,6 +2726,20 @@ def generate_report():
                 if height > max_height:
                     max_height = height
 
+            # Check if we need a new page
+            if pdf.get_y() + max_height > pdf.page_break_trigger:
+                pdf.add_page()
+                # Re-add headers on new page
+                pdf.set_font("Arial", size=12, style='B')
+                if 'col_widths' in locals():
+                    for i, header in enumerate(headers):
+                        pdf.cell(col_widths[i], 12, header, border=1, align='C')
+                else:
+                    for header in headers:
+                        pdf.cell(col_width, 12, header, border=1, align='C')
+                pdf.ln()
+                pdf.set_font("Arial", size=10)
+
             # Second pass: draw cells
             start_y = pdf.get_y()
             for i, (value, height) in enumerate(zip(cell_values, cell_heights)):
@@ -2542,14 +2751,10 @@ def generate_report():
                     x = pdf.l_margin + sum(col_widths[:i])
                     pdf.set_xy(x, start_y)
                     pdf.multi_cell(col_widths[i], line_height, value, border=1, align='L')
-                    # Reset y position for next cell in row
-                    pdf.set_xy(pdf.get_x(), start_y)
                 else:
                     x = pdf.l_margin + i * col_width
                     pdf.set_xy(x, start_y)
                     pdf.multi_cell(col_width, line_height, value, border=1, align='L')
-                    # Reset y position for next cell in row
-                    pdf.set_xy(pdf.get_x(), start_y)
 
             # Move to next row
             pdf.set_xy(pdf.l_margin, start_y + max_height)

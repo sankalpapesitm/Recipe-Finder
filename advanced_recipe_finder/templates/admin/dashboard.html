@@ -93,7 +93,14 @@
                             <div class="list-group list-group-flush">
                                 {% for recipe in recent_recipes %}
                                 <div class="list-group-item px-0 py-3 border-0">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <div class="recipe-thumbnail me-3">
+                                            {% if recipe.image_url %}
+                                            <img src="{{ recipe.image_url if recipe.image_url.startswith('http') else url_for('uploaded_file', filename=recipe.image_url) }}" alt="{{ recipe.title }}" class="rounded" loading="lazy">
+                                            {% else %}
+                                            <img src="{{ url_for('static', filename='uploads/default_recipe.jpg') }}" alt="Default recipe" class="rounded">
+                                            {% endif %}
+                                        </div>
                                         <div class="flex-grow-1">
                                             <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="text-decoration-none fw-semibold text-dark">
                                                 {{ recipe.title }}
@@ -185,6 +192,18 @@
 
 .list-group-item:hover {
     background-color: #f8f9fa;
+}
+
+.recipe-thumbnail {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.recipe-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .display-4 {

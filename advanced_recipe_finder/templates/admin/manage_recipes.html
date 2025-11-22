@@ -57,7 +57,17 @@
                                 {{ recipe.difficulty }}
                             </span>
                         </td>
-                        <td>{{ recipe.cooking_time }} min</td>
+                        <td>
+                        {% if recipe.cooking_time %}
+                            {% if recipe.cooking_time >= 60 %}
+                                {{ recipe.cooking_time // 60 }} hour{{ 's' if recipe.cooking_time // 60 > 1 else '' }}{% if recipe.cooking_time % 60 > 0 %} {{ recipe.cooking_time % 60 }} min{% endif %}
+                            {% else %}
+                                {{ recipe.cooking_time }} min
+                            {% endif %}
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                        </td>
                         <td>{{ recipe.created_at.strftime('%m/%d/%Y') }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">

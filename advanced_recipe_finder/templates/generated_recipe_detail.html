@@ -13,8 +13,6 @@
                         <button id="read-recipe-btn" class="btn btn-light btn-sm me-2"><i class="fas fa-volume-up"></i> Read Recipe</button>
                         {% if not generated_recipe.is_saved %}
                         <button id="save-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-save"></i> Save</button>
-                        {% else %}
-                        <span class="badge bg-light text-success"><i class="fas fa-check-circle me-1"></i>Already Saved</span>
                         {% endif %}
                         <button id="download-recipe-btn" class="btn btn-light btn-sm"><i class="fas fa-download"></i> Download</button>
                     </div>
@@ -41,9 +39,18 @@
                     <p class="text-center text-muted mb-4">{{ generated_recipe.recipe_data.description or '' }}</p>
 
                     <div class="d-flex justify-content-around text-center mb-4 p-3 bg-light rounded">
-                        <span><i class="fas fa-clock me-1"></i> {{ generated_recipe.recipe_data.cooking_time }}</span>
+                        <span><i class="fas fa-clock me-1"></i> 
+                        {% if generated_recipe.recipe_data.cooking_time %}
+                            {% if generated_recipe.recipe_data.cooking_time >= 60 %}
+                                {{ generated_recipe.recipe_data.cooking_time // 60 }} hour{{ 's' if generated_recipe.recipe_data.cooking_time // 60 > 1 else '' }}{% if generated_recipe.recipe_data.cooking_time % 60 > 0 %} {{ generated_recipe.recipe_data.cooking_time % 60 }} minutes{% endif %}
+                            {% else %}
+                                {{ generated_recipe.recipe_data.cooking_time }} minutes
+                            {% endif %}
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                        </span>
                         <span><i class="fas fa-tachometer-alt me-1"></i> {{ generated_recipe.recipe_data.difficulty }}</span>
-                        <span><i class="fas fa-tag me-1"></i> {{ generated_recipe.recipe_data.category }}</span>
                     </div>
 
                     <!-- Ingredients and Instructions Side by Side -->
@@ -96,6 +103,7 @@
     <input type="hidden" name="recipe_data" id="recipeDataInput">
     <input type="hidden" name="image_url" id="imageUrlInput">
     <input type="hidden" name="image_prompt" id="imagePromptInput">
+    <input type="hidden" name="generated_recipe_id" id="generatedRecipeIdInput" value="{{ generated_recipe.id }}">
 </form>
 {% endblock %}
 
@@ -213,20 +221,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.status === 'success') {
                     alert(data.message);
-                    window.location.href = data.redirect_url;
+                    // Reload the current page to show "Already Saved" badge
+                    window.location.reload();
                 } else {
                     alert('Error: ' + data.error);
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('An error occurred while saving the recipe.');
-            })
-            .finally(() => {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
-                // Hide the save button after successful save
-                saveBtn.style.display = 'none';
             });
         });
     }

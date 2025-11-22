@@ -21,6 +21,6 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     
     # API Keys - All API keys configured here only
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'AIzaSyBPbyIU5WW-TneqL7AVBUZecVAt-764I74'
-    BYTEZ_API_KEY = os.environ.get('BYTEZ_API_KEY') or 'fca34f9c49ef4fb9170d8b1360801ba3'
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'your-gemini-api-key-here'
+    BYTEZ_API_KEY = os.environ.get('BYTEZ_API_KEY') or 'your-bytez-api-key-here'
 

@@ -31,6 +31,17 @@
                                 <input type="text" class="form-control form-control-lg" id="meal_type" name="meal_type" placeholder="e.g., Dinner, Lunch" value="{{ form_data.meal_type or '' }}" style="border-radius: 8px;">
                             </div>
                             <div class="col-md-6 mb-4">
+                                <label for="difficulty" class="form-label fw-semibold">Difficulty Level</label>
+                                <select class="form-select form-select-lg" id="difficulty" name="difficulty" style="border-radius: 8px;">
+                                    <option value="">Any</option>
+                                    <option value="Easy" {{ 'selected' if form_data.difficulty == 'Easy' else '' }}>Easy</option>
+                                    <option value="Medium" {{ 'selected' if form_data.difficulty == 'Medium' else '' }}>Medium</option>
+                                    <option value="Hard" {{ 'selected' if form_data.difficulty == 'Hard' else '' }}>Hard</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
                                 <label for="dietary_restrictions" class="form-label fw-semibold">Dietary Restrictions</label>
                                 <input type="text" class="form-control form-control-lg" id="dietary_restrictions" name="dietary_restrictions" placeholder="e.g., Vegetarian, Gluten-free" value="{{ form_data.dietary_restrictions or '' }}" style="border-radius: 8px;">
                             </div>
@@ -74,9 +85,19 @@
                         </div>
                         
                         <div class="d-flex justify-content-around text-center mb-4 p-3 bg-light rounded">
-                            <span><i class="fas fa-clock me-1"></i> {{ generated_recipe.cooking_time }}</span>
+                            <span><i class="fas fa-clock me-1"></i> 
+                            {% if generated_recipe.cooking_time %}
+                                {% set cooking_minutes = generated_recipe.cooking_time|int %}
+                                {% if cooking_minutes >= 60 %}
+                                    {{ cooking_minutes // 60 }} hour{{ 's' if cooking_minutes // 60 > 1 else '' }}{% if cooking_minutes % 60 > 0 %} {{ cooking_minutes % 60 }} minutes{% endif %}
+                                {% else %}
+                                    {{ cooking_minutes }} minutes
+                                {% endif %}
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                            </span>
                             <span><i class="fas fa-tachometer-alt me-1"></i> {{ generated_recipe.difficulty }}</span>
-                            <span><i class="fas fa-tag me-1"></i> {{ generated_recipe.category }}</span>
                         </div>
 
                         <!-- Ingredients and Instructions Side by Side -->
